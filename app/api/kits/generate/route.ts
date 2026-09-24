@@ -41,6 +41,8 @@ export async function POST(req: Request) {
       progressStage: "retrieval",
       progressMessage: "Crawling company website and parsing job description",
       daysRequested: days,
+      schedule: { days_available: days, days: [] },
+      coverage: { uncovered_requirement_ids: [], passes: 0 },
       source: {
         company: "",
         company_url,

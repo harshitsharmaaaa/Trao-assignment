@@ -129,7 +129,9 @@ Snippets: ${publicResearch.snippets.join("\n")}
 
 <untrusted_job_description>
 ${rawJd}
-</untrusted_job_description>`,
+</untrusted_job_description>
+
+Return ONLY a single JSON object (no wrapper, no markdown) with EXACTLY these keys: "company_name" (string), "role_title" (string), "seniority" (string, e.g. Junior/Mid/Senior/Lead), "location" (string), "summary" (string, 2-3 sentences), "what_they_do" (string, 1-2 sentences), "responsibilities" (array of strings). Do not add, rename, or omit any key.`,
       SystemPromptSecurityBoundary,
       briefAndRoleSchema
     );
@@ -167,7 +169,9 @@ Hiring Context:
 ${crawlResult.hiringInfoText.slice(0, 2000)}
 
 Public Interview Process Research:
-${publicResearch.summary}`,
+${publicResearch.summary}
+
+Return ONLY a single JSON object (no wrapper, no markdown) with EXACTLY two keys: "questions" and "flashcards". Each element of "questions" MUST be an object with EXACTLY these keys: "requirement_id" (string, one of the requirement IDs listed above), "category" (one of "technical" | "behavioural" | "system-design" | "company-fit"), "prompt" (string), "answer_outline" (string), "difficulty" (integer 1-3). Each element of "flashcards" MUST be an object with EXACTLY these keys: "front" (string), "back" (string), "requirement_id" (string, one of the requirement IDs listed above). Do not add, rename, or omit any key.`,
       SystemPromptSecurityBoundary,
       pass1Schema
     );
@@ -221,7 +225,9 @@ ${publicResearch.summary}`,
 
       const gapQuestionsOutput = await generateStructuredJson(
         `Generate missing targeted questions ONLY for these uncovered MUST requirements:
-${uncoveredReqs.map((r) => `${r.id}: ${r.text}`).join("\n")}`,
+${uncoveredReqs.map((r) => `${r.id}: ${r.text}`).join("\n")}
+
+Return ONLY a bare JSON array (no wrapper object, no markdown). Each element MUST be an object with EXACTLY these keys: "requirement_id" (string, the matching requirement ID from the list above), "category" (one of "technical" | "behavioural" | "system-design" | "company-fit"), "prompt" (string), "answer_outline" (string), "difficulty" (integer 1-3). Do not add, rename, or omit any key.`,
         SystemPromptSecurityBoundary,
         gapSchema
       );

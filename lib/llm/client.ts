@@ -98,6 +98,26 @@ function getFallbackJsonForSchema<T>(schema: z.ZodType<T>, prompt: string): T {
       responsibilities: ["Develop UI components", "Optimize web performance"],
     } as unknown as T;
   }
+  if (pLower.includes("regenerate company brief")) {
+    return {
+      summary: "Regenerated concise company summary.",
+      what_they_do: "Regenerated description of what the company does.",
+      sources: [],
+    } as unknown as T;
+  }
+  if (pLower.includes("regenerate questions specifically for category")) {
+    const m = pLower.match(/category '([a-z-]+)'/);
+    const cat = (m && m[1]) || "technical";
+    return [
+      {
+        requirement_id: "r1",
+        category: cat,
+        prompt: `Regenerated ${cat} interview question for review.`,
+        answer_outline: "Regenerated structured answer outline.",
+        difficulty: 2,
+      },
+    ] as unknown as T;
+  }
   if (pLower.includes("generate missing targeted questions")) {
     return [
       {

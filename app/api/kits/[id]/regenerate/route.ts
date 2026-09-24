@@ -49,7 +49,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       });
 
       const newBrief = await generateStructuredJson(
-        `Regenerate company brief summary and what they do for ${kitDoc.source.company || "the company"}.`,
+        `Regenerate company brief summary and what they do for ${kitDoc.source.company || "the company"}. Return ONLY a single JSON object (no wrapper, no markdown) with EXACTLY these keys: "summary" (string), "what_they_do" (string), "sources" (array of strings). Do not add, rename, or omit any key.`,
         "Regenerate concise company information.",
         briefSchema
       );
@@ -74,7 +74,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       );
 
       const rawNewQuestions = await generateStructuredJson(
-        `Regenerate questions specifically for category '${section}' for role ${kitDoc.role.title || "Engineer"}.`,
+        `Regenerate questions specifically for category '${section}' for role ${kitDoc.role.title || "Engineer"}. Return ONLY a bare JSON array (no wrapper object, no markdown). Each element MUST be an object with EXACTLY these keys: "requirement_id" (string), "category" (always "${section}"), "prompt" (string), "answer_outline" (string), "difficulty" (integer 1-3). Do not add, rename, or omit any key.`,
         "Generate realistic interview questions for the specified category.",
         categoryQuestionsSchema
       );
