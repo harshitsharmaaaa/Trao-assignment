@@ -166,6 +166,11 @@ npm run evaluate -- --input cases.json --output kits.json
 
 ---
 
+## Real-Gemini Verification Notes (Local Only)
+- Production uses a single `GEMINI_API_KEY` with `LLM_MODEL=gemini-3.6-flash` and `MOCK_LLM=false`. There is no production key rotation.
+- `runPipeline()` makes 3–4 Gemini calls per case (extraction, brief + role, pass-1 generation, conditional gap fill), so a 5-case batch needs at least 15–20 successful calls before retries.
+- If one project's free-tier quota is exhausted, local verification may split the batch across runs, each run using a different Google Cloud project's key passed via process environment only (never committed, never printed). Each run uses the same canonical `runPipeline()`; per-run outputs are merged into one Appendix B document with duplicate-case-ID rejection. Report only `provider/model/mock/cases/successful-live-calls/failed-live-calls/runtime`.
+
 ## Deployment
 The application is deployed using standard Next.js App Router deployment conventions (Vercel / Railway / Node.js standalone):
 ```bash
