@@ -1,0 +1,32 @@
+[
+  {
+    "id": "case_1_normal",
+    "jd": "We are seeking a Senior Full-Stack Engineer with strong TypeScript, React, Next.js, Node.js, and MongoDB experience. You will lead system architecture, build scalable APIs, mentor junior engineers, and participate in agile sprints.",
+    "company_url": "https://stripe.com",
+    "days": 7
+  },
+  {
+    "id": "case_2_sparse",
+    "jd": "Looking for a Python backend developer to build REST APIs.\nMust have experience with Django and Postgres.",
+    "company_url": "https://github.com",
+    "days": 3
+  },
+  {
+    "id": "case_3_nohiring",
+    "jd": "Frontend developer needed with expertise in Vue.js, Tailwind CSS, and Webpack. Strong communication skills and UI design sensibility required.",
+    "company_url": "https://example.com",
+    "days": 5
+  },
+  {
+    "id": "case_4_unreachable",
+    "jd": "DevOps Engineer required with Terraform, AWS, Docker, Kubernetes, and CI/CD automation experience.",
+    "company_url": "http://invalid-domain-unreachable-999.xyz",
+    "days": 4
+  },
+  {
+    "id": "case_5_local",
+    "jd": "Software Engineer with C++, System Design, and Data Structures expertise.",
+    "company_url": "http://localhost:8080/company",
+    "days": 5
+  }
+]
