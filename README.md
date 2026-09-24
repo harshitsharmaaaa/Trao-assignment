@@ -172,9 +172,12 @@ npm run evaluate -- --input cases.json --output kits.json
 - If one project's free-tier quota is exhausted, local verification may split the batch across runs, each run using a different Google Cloud project's key passed via process environment only (never committed, never printed). Each run uses the same canonical `runPipeline()`; per-run outputs are merged into one Appendix B document with duplicate-case-ID rejection. Report only `provider/model/mock/cases/successful-live-calls/failed-live-calls/runtime`.
 
 ## Deployment
-The application is deployed using standard Next.js App Router deployment conventions (Vercel / Railway / Node.js standalone):
-```bash
-bun run build
-bun run start
-```
-Configure `MONGODB_URI`, `JWT_SECRET`, `GEMINI_API_KEY`, `LLM_MODEL=gemini-3.6-flash`, and `ALLOW_LOCAL_URLS=false` in the deployment platform's environment variables dashboard.
+Target host: Netlify (`netlify.toml` at repo root; build `npm run build`, publish `.next`; Next Runtime auto-applied).
+Production environment variables (host dashboard only, never committed):
+`MONGODB_URI` (Atlas), `JWT_SECRET`, `GEMINI_API_KEY` (single production project key), `LLM_PROVIDER=gemini`, `LLM_MODEL=gemini-3.6-flash`, `MOCK_LLM=false`, `ALLOW_LOCAL_URLS=false`.
+Local production check: `bun run build` compiles cleanly (12 static + dynamic routes). Public URL pending site creation.
+
+## Known Limitations
+- Gemini free tier (`gemini-3.6-flash`): ~20 generate requests/day and 5/min per Google Cloud project, plus occasional 503 demand spikes. A 5-case batch needs 15–20+ successful calls, so verification may require quota headroom or the documented multi-project local protocol.
+- Public interview research scrapes a public search endpoint and may honestly return zero snippets; the pipeline records the gap instead of fabricating.
+- Local MongoDB suffices for development; production requires MongoDB Atlas.

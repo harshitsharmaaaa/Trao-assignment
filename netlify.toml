@@ -1,0 +1,14 @@
+# Netlify deployment for the single Next.js App Router application.
+# Netlify auto-detects Next.js (v13.5+) and applies its Next Runtime
+# automatically — no plugin installation required.
+# Required environment variables (Site settings > Environment variables):
+#   MONGODB_URI (MongoDB Atlas connection string)
+#   JWT_SECRET (long random secret)
+#   GEMINI_API_KEY (single production Google Cloud project key)
+#   LLM_PROVIDER=gemini
+#   LLM_MODEL=gemini-3.6-flash
+#   MOCK_LLM=false
+#   ALLOW_LOCAL_URLS=false
+[build]
+  command = "npm run build"
+  publish = ".next"
