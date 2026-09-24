@@ -2,6 +2,7 @@ import { parseArgs } from "util";
 import fs from "fs/promises";
 import { BatchInputSchema, BatchOutput, BatchKitResult } from "@/schemas/batch.schema";
 import { runPipeline } from "@/lib/pipeline/orchestrator";
+import { getLlmStats } from "@/lib/llm/client";
 
 async function main() {
   const { values } = parseArgs({
@@ -74,6 +75,15 @@ async function main() {
 
   await fs.writeFile(outputPath, JSON.stringify(output, null, 2), "utf-8");
   console.log(`[Batch Evaluator] Successfully processed ${kitResults.length} cases and wrote output to ${outputPath}`);
+
+  // Safe verification metadata only: counts and config, never secrets or content.
+  const stats = getLlmStats();
+  const provider = process.env.LLM_PROVIDER || "gemini";
+  const model = process.env.LLM_MODEL || "gemini-3.6-flash";
+  const mock = process.env.MOCK_LLM === "true" || provider === "mock";
+  console.log(
+    `[LLM Stats] provider=${provider} model=${model} mock=${mock} successful_calls=${stats.successfulCalls} failed_calls=${stats.failedCalls} failed_attempts=${stats.failedAttempts} retries=${stats.retryCount} http_requests=${stats.totalHttpRequests} runtime_ms=${stats.totalRuntimeMs}`
+  );
 }
 
 main().catch((err) => {

@@ -15,6 +15,97 @@ async function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+// ---------------------------------------------------------------------------
+// Provider-level rate limiting (process-wide).
+// Every real HTTP attempt — including retries — consumes provider quota, so
+// every attempt must pass through acquireRateSlot() before touching the API.
+// Mock generation makes zero HTTP requests and bypasses the limiter.
+// The limit is configured via LLM_REQUESTS_PER_MINUTE (default 5, matching
+// the observed Gemini free-tier per-minute quota). No key rotation: the
+// limiter only paces requests made with the single configured GEMINI_API_KEY.
+// NOTE: the window is per-process; separate processes/hosts have separate
+// windows, so keep parallel producers within the same budget.
+// ---------------------------------------------------------------------------
+const RATE_WINDOW_MS = 60_000;
+
+export function resolveRequestsPerMinute(): number {
+  const raw = Number(process.env.LLM_REQUESTS_PER_MINUTE);
+  if (Number.isFinite(raw) && raw > 0) return Math.floor(raw);
+  return 5;
+}
+
+const attemptTimestamps: number[] = [];
+let admissionQueue: Promise<void> = Promise.resolve();
+
+export async function acquireRateSlot(): Promise<void> {
+  let release = () => {};
+  const previous = admissionQueue;
+  admissionQueue = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await previous;
+  try {
+    const limit = resolveRequestsPerMinute();
+    for (;;) {
+      const now = Date.now();
+      while (attemptTimestamps.length > 0 && attemptTimestamps[0] <= now - RATE_WINDOW_MS) {
+        attemptTimestamps.shift();
+      }
+      if (attemptTimestamps.length < limit) {
+        attemptTimestamps.push(now);
+        return;
+      }
+      const waitMs = attemptTimestamps[0] + RATE_WINDOW_MS - now + 50;
+      console.log(
+        `[LLM Rate Limiter] ${attemptTimestamps.length} provider requests in the last minute (limit=${limit}/min). Throttling ${(waitMs / 1000).toFixed(1)}s.`
+      );
+      await sleep(waitMs);
+    }
+  } finally {
+    release();
+  }
+}
+
+export function resetRateLimiter(): void {
+  attemptTimestamps.length = 0;
+}
+
+// ---------------------------------------------------------------------------
+// Safe usage statistics (real provider calls only — mock calls return before
+// any counter is touched). Exposes counts only: no keys, no prompts, no
+// response content. Read via getLlmStats() for verification reporting.
+// ---------------------------------------------------------------------------
+export interface LlmStats {
+  successfulCalls: number;
+  failedCalls: number;
+  totalHttpRequests: number;
+  failedAttempts: number;
+  retryCount: number;
+  totalRuntimeMs: number;
+}
+
+const llmStats: LlmStats = {
+  successfulCalls: 0,
+  failedCalls: 0,
+  totalHttpRequests: 0,
+  failedAttempts: 0,
+  retryCount: 0,
+  totalRuntimeMs: 0,
+};
+
+export function getLlmStats(): LlmStats {
+  return { ...llmStats };
+}
+
+export function resetLlmStats(): void {
+  llmStats.successfulCalls = 0;
+  llmStats.failedCalls = 0;
+  llmStats.totalHttpRequests = 0;
+  llmStats.failedAttempts = 0;
+  llmStats.retryCount = 0;
+  llmStats.totalRuntimeMs = 0;
+}
+
 export async function generateStructuredJson<T>(
   prompt: string,
   systemInstruction: string,
@@ -50,10 +141,16 @@ export async function generateStructuredJson<T>(
     systemInstruction,
   });
 
+  const callStartedAt = Date.now();
   let lastError: any = null;
   let delay = 1000;
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    // Every attempt is a real provider request (retries included): pace it.
+    await acquireRateSlot();
+    llmStats.totalHttpRequests += 1;
+    if (attempt > 1) llmStats.retryCount += 1;
+
     try {
       const result = await model.generateContent(prompt);
       const text = result.response.text();
@@ -61,9 +158,12 @@ export async function generateStructuredJson<T>(
       const parsedRaw = JSON.parse(cleanedJson);
 
       const validated = schema.parse(parsedRaw);
+      llmStats.successfulCalls += 1;
+      llmStats.totalRuntimeMs += Date.now() - callStartedAt;
       return validated;
     } catch (err: any) {
       lastError = err;
+      llmStats.failedAttempts += 1;
       console.warn(`[LLM Retry ${attempt}/${maxRetries}] Failed: ${err.message}`);
 
       if (attempt < maxRetries) {
@@ -73,6 +173,8 @@ export async function generateStructuredJson<T>(
     }
   }
 
+  llmStats.failedCalls += 1;
+  llmStats.totalRuntimeMs += Date.now() - callStartedAt;
   throw new Error(`[LLM Fatal Error] Gemini API call (${modelName}) failed after ${maxRetries} retries: ${lastError?.message}`);
 }
 
