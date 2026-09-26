@@ -1,8 +1,10 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
-// Subtle state indicators per design system. Status is never color-only:
-// every badge pairs color with an icon and/or explicit text.
+/**
+ * Badge component with cyberpunk styling.
+ * Status is never color-only - always paired with icon and/or text.
+ */
 type BadgeVariant =
   | "must"
   | "nice"
@@ -17,17 +19,17 @@ type BadgeVariant =
   | "muted";
 
 const variantClasses: Record<BadgeVariant, string> = {
-  must: "bg-red-500/20 text-red-300",
-  nice: "bg-slate-700/60 text-slate-300",
-  kind: "bg-slate-800 text-slate-400",
-  edited: "bg-amber-500/20 text-amber-300",
-  custom: "bg-violet-500/20 text-violet-300",
-  generated: "bg-slate-800 text-slate-400",
-  success: "bg-emerald-500/10 text-emerald-400",
-  warning: "bg-amber-500/10 text-amber-400",
-  danger: "bg-red-500/10 text-red-400",
-  info: "bg-indigo-500/10 text-indigo-300",
-  muted: "bg-slate-800/70 text-slate-500",
+  must: "bg-red-500/20 text-red-300 border border-red-500/30",
+  nice: "bg-slate-700/60 text-slate-300 border border-slate-600/50",
+  kind: "bg-slate-800 text-slate-400 border border-slate-700/50",
+  edited: "bg-amber-500/20 text-amber-300 border border-amber-500/30",
+  custom: "bg-violet-500/20 text-violet-300 border border-violet-500/30",
+  generated: "bg-slate-800 text-slate-400 border border-slate-700/50",
+  success: "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30",
+  warning: "bg-amber-500/15 text-amber-400 border border-amber-500/30",
+  danger: "bg-red-500/15 text-red-400 border border-red-500/30",
+  info: "bg-neon/15 text-neon-bright border border-neon/30",
+  muted: "bg-slate-800/70 text-slate-500 border border-slate-700/50",
 };
 
 export function Badge({
@@ -42,7 +44,7 @@ export function Badge({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide",
+        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide border",
         variantClasses[variant],
         className
       )}

@@ -5,12 +5,30 @@ type ButtonVariant = "primary" | "secondary" | "ghost" | "dangerGhost";
 type ButtonSize = "sm" | "md" | "lg" | "icon";
 
 const variantClasses: Record<ButtonVariant, string> = {
-  primary:
-    "bg-indigo-600 text-white font-semibold hover:bg-indigo-500 shadow-md hover:shadow-indigo-500/10 disabled:opacity-50",
-  secondary:
-    "border border-slate-800 bg-slate-900 text-slate-300 hover:bg-slate-800 hover:text-white disabled:opacity-50",
-  ghost: "text-slate-400 hover:text-white hover:bg-slate-800/70 disabled:opacity-50",
-  dangerGhost: "text-slate-400 hover:text-red-400 hover:bg-red-500/10 disabled:opacity-50",
+  primary: [
+    "bg-neon text-white font-semibold",
+    "hover:bg-neon-bright",
+    "shadow-lg shadow-neon/20",
+    "hover:shadow-neon hover:shadow-neon/40",
+    "transition-all duration-200",
+    "disabled:opacity-50 disabled:shadow-none",
+  ].join(" "),
+  secondary: [
+    "border border-white/10 bg-white/[0.05] backdrop-blur",
+    "text-slate-300 hover:text-white",
+    "hover:bg-white/[0.08] hover:border-white/15",
+    "disabled:opacity-50",
+  ].join(" "),
+  ghost: [
+    "text-slate-400 hover:text-white",
+    "hover:bg-white/[0.05]",
+    "disabled:opacity-50",
+  ].join(" "),
+  dangerGhost: [
+    "text-slate-400 hover:text-red-400",
+    "hover:bg-red-500/10",
+    "disabled:opacity-50",
+  ].join(" "),
 };
 
 const sizeClasses: Record<ButtonSize, string> = {
@@ -32,9 +50,10 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       ref={ref}
       disabled={disabled || loading}
       className={cn(
-        "inline-flex items-center justify-center gap-2 rounded-lg font-medium transition duration-150 ease-out",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950",
+        "inline-flex items-center justify-center gap-2 rounded-lg font-medium",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon focus-visible:ring-offset-2 focus-visible:ring-offset-cyber-bg",
         "min-h-[36px]",
+        "disabled:cursor-not-allowed",
         variantClasses[variant],
         sizeClasses[size],
         className

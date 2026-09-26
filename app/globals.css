@@ -2,35 +2,65 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  /* Cyberpunk color scheme */
+  --color-bg: #0a0a0f;
+  --color-surface: #12121a;
+  --color-elevated: #1a1a28;
+  --color-well: #0d0d12;
+  --color-border: rgba(255, 255, 255, 0.08);
+  --color-border-emphasis: rgba(255, 255, 255, 0.15);
+  --color-border-glow: rgba(14, 165, 233, 0.4);
+  --color-accent: #0ea5e9;
+  --color-accent-bright: #38bdf8;
+  
+  /* Frosted glass */
+  --glass-bg: rgba(255, 255, 255, 0.05);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  
+  /* Status colors */
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-error: #ef4444;
+}
+
 body {
   color-scheme: dark;
+  background-color: var(--color-bg);
 }
 
 ::selection {
-  background-color: rgb(99 102 241 / 0.35);
+  background-color: rgba(14, 165, 233, 0.35);
 }
 
-/* Visible keyboard focus everywhere (design system: restrained, consistent). */
+/* Neon focus ring - cyberpunk style */
 :focus-visible {
-  outline: 2px solid rgb(99 102 241);
+  outline: 2px solid var(--color-accent);
   outline-offset: 2px;
+  box-shadow: 0 0 15px rgba(14, 165, 233, 0.3);
 }
 
-/* Subtle scrollbars for sidebar / drawers on dark surfaces. */
+/* Scrollbars - cyberpunk dark */
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgb(51 65 85) transparent;
+  scrollbar-color: #2a2a3a transparent;
 }
+
 *::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
+
 *::-webkit-scrollbar-thumb {
-  background-color: rgb(51 65 85);
+  background-color: #2a2a3a;
   border-radius: 8px;
 }
 
-/* Restrained motion: honor users who prefer reduced motion. */
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -39,5 +69,186 @@ body {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+/* Frosted glass utility */
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid var(--glass-border);
+}
+
+.glass-strong {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+/* Neon glow utilities */
+.neon-glow {
+  box-shadow: 0 0 20px rgba(14, 165, 233, 0.3);
+}
+
+.neon-glow:hover {
+  box-shadow: 0 0 30px rgba(14, 165, 233, 0.5);
+}
+
+.neon-glow-static {
+  box-shadow: 0 0 25px rgba(14, 165, 233, 0.4);
+}
+
+/* Animated gradient background for auth pages */
+.auth-gradient-bg {
+  background: linear-gradient(135deg, 
+    #0a0a0f 0%, 
+    #1a1a28 25%, 
+    #0f172a 50%, 
+    #1e1b4b 75%, 
+    #0a0a0f 100%);
+  background-size: 400% 400%;
+  animation: gradientShift 15s ease infinite;
+}
+
+@keyframes gradientShift {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+/* Mesh gradient overlay */
+.mesh-overlay {
+  background-image: 
+    radial-gradient(at 40% 20%, rgba(14, 165, 233, 0.15) 0px, transparent 50%),
+    radial-gradient(at 80% 0%, rgba(99, 102, 241, 0.1) 0px, transparent 50%),
+    radial-gradient(at 0% 50%, rgba(14, 165, 233, 0.1) 0px, transparent 50%),
+    radial-gradient(at 80% 50%, rgba(99, 102, 241, 0.1) 0px, transparent 50%),
+    radial-gradient(at 0% 100%, rgba(14, 165, 233, 0.15) 0px, transparent 50%),
+    radial-gradient(at 80% 100%, rgba(99, 102, 241, 0.1) 0px, transparent 50%);
+}
+
+/* Cyberpunk panel styling */
+.cyber-panel {
+  background: linear-gradient(135deg, rgba(18, 18, 26, 0.95), rgba(26, 26, 40, 0.95));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 
+    0 4px 24px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+/* Cyberpunk card with hover glow */
+.cyber-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.cyber-card:hover {
+  border-color: rgba(14, 165, 233, 0.3);
+  box-shadow: 0 0 20px rgba(14, 165, 233, 0.15);
+}
+
+/* Pulse animation for status indicators */
+.status-pulse {
+  animation: statusPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes statusPulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+/* Neon border animation */
+.neon-border-animate {
+  position: relative;
+}
+
+.neon-border-animate::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, 
+    rgba(14, 165, 233, 0.5), 
+    rgba(99, 102, 241, 0.5), 
+    rgba(14, 165, 233, 0.5));
+  background-size: 200% 200%;
+  animation: borderGlow 3s ease infinite;
+  -webkit-mask: 
+    linear-gradient(#fff 0 0) content-box, 
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+@keyframes borderGlow {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+/* Timeline connector styling */
+.timeline-connector {
+  background: linear-gradient(180deg, 
+    transparent 0%, 
+    rgba(14, 165, 233, 0.3) 20%, 
+    rgba(14, 165, 233, 0.3) 80%, 
+    transparent 100%);
+}
+
+/* Tab underline animation */
+.tab-underline {
+  position: relative;
+}
+
+.tab-underline::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #0ea5e9, #38bdf8);
+  transform: scaleX(0);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.tab-underline[aria-selected="true"]::after,
+.tab-underline[data-active="true"]::after {
+  transform: scaleX(1);
+}
+
+/* Loading shimmer effect */
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.03) 0%,
+    rgba(255, 255, 255, 0.08) 50%,
+    rgba(255, 255, 255, 0.03) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
   }
 }

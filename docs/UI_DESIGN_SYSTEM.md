@@ -1,63 +1,160 @@
 # UI Design System — AI Interview Prep Kit
 
-> Authoritative UI planning document (see `AGENTS.md`). Normalized from all selected templates into ONE product identity.
-> Stack: Next.js 14 App Router + TypeScript + Tailwind CSS + shadcn-style primitives + lucide-react. Dark-first.
+> Authoritative UI planning document (see `AGENTS.md`).
+> Stack: Next.js 14 App Router + TypeScript + Tailwind CSS + shadcn-style primitives + lucide-react.
+> **Theme: Cyberpunk/Tactical Dark with Neon Blue Accents**
 
 ## Product identity
-Serious, developer-focused study workspace. Current code already speaks slate-950/900 + indigo-600 — keep that
-soul, formalize it into tokens. No gradients-as-decoration, no glassmorphism, no neon. One accent, used sparingly:
-progress, current-step, primary actions, active nav.
+Professional, developer-focused interview preparation workspace with a tactical command-center aesthetic.
+The design features dark steel surfaces (#0a0a0f to #1a1a28), neon blue accents (#0ea5e9 / #38bdf8),
+and subtle glow effects. Frosted glass effects are used for authentication pages.
 
-## Color strategy (dark-first tokens)
-- Background: `slate-950` app base, `slate-900` raised surfaces/cards, `slate-900/50` inset wells (answer outlines).
-- Borders: `slate-800` default, `slate-700` on emphasis; error `red-500/30`, success `emerald-500/*`.
-- Text: `white` headings/primary, `slate-300` body, `slate-400/500` secondary/meta.
-- Accent: `indigo-500/600` primary actions + active states; `indigo-400` for eyebrow labels/links on dark.
-- Status: ok/covered `emerald-400`; running/current `amber-400`; failed/uncovered `red-400`; info `indigo-400`;
-  MUST `red` badge; NICE `slate` badge; `user_edited` `amber` badge. Status is never color-only — always with icon + text.
-- Light mode: not in scope for assessment; tokens chosen from shadcn CSS-variable convention so a light theme can be added later without restructuring.
+## Color strategy (cyberpunk theme)
+
+### Backgrounds
+- `cyber-bg` (#0a0a0f): App base, deepest black
+- `cyber-surface` (#12121a): Cards, panels, sidebar
+- `cyber-elevated` (#1a1a28): Modals, dropdowns, hover states
+- `cyber-well` (#0d0d12): Inset wells, code blocks
+
+### Borders
+- `border-white/5` to `border-white/10`: Default borders
+- `border-neon/30`: Active/focus borders with glow
+- Error: `border-red-500/30`
+- Success: `border-emerald-500/30`
+
+### Text
+- `text-white`: Headings, primary text
+- `text-slate-300`: Body text
+- `text-slate-400`: Secondary text
+- `text-slate-500`: Tertiary, muted text
+- `text-neon-bright` (#38bdf8): Accent text, links, IDs
+
+### Accent (Neon Blue)
+- `bg-neon` (#0ea5e9): Primary buttons, active states
+- `text-neon-bright` (#38bdf8): Bright accent for text
+- `shadow-neon`: Glow effects (0 0 20px rgba(14, 165, 233, 0.3))
+- Used sparingly: progress indicators, current step, primary actions, active nav
+
+### Status Colors
+- Success/Covered: `text-emerald-400`, `bg-emerald-500/15`
+- Running/Current: `text-neon-bright`, `bg-neon/15`, animated pulse
+- Failed/Uncovered: `text-red-400`, `bg-red-500/15`
+- Warning: `text-amber-400`, `bg-amber-500/15`
+- MUST: `text-red-300`, `bg-red-500/20`
+- NICE: `text-slate-300`, `bg-slate-700/60`
+- Edited: `text-amber-300`, `bg-amber-500/20`
+
+### Frosted Glass (Auth pages only)
+- `bg-white/[0.05]` with `backdrop-blur-3xl`
+- `border-white/10`
+- Inner glow gradient overlay
 
 ## Typography
-- Font: system stack now (`font-sans`); adopt Inter or Geist at implementation time via `next/font` (single variable font, weights 400/500/600/700). Tabular numerals for minutes/counts.
-- Hierarchy: page title 24/bold/tracking-tight; section 18/bold; card title 15–16/semibold; body 14/relaxed; meta/eyebrow 12/medium-uppercase-tracking-wider (`text-slate-400`); code/IDs 12 mono (`font-mono`, `text-indigo-400`).
-- Measure: prose max ~70ch (brief, outlines); question prompts 15–16 semibold for scanability.
+- Font: Inter via `next/font` (variable font, weights 400/500/600/700)
+- Hierarchy:
+  - Page title: 24-32px / bold / tracking-tight
+  - Section: 18-20px / bold
+  - Card title: 16px / semibold
+  - Body: 14px / relaxed
+  - Meta/eyebrow: 11-12px / medium / uppercase / tracking-wider
+  - Code/IDs: 11-12px / font-mono / text-neon-bright
 
 ## Spacing system
-- Base 4px; section rhythm `space-y-10` page / `p-6` cards / `gap-3–4` rows; page container `max-w-7xl` (workspace `max-w-5xl` for reading surfaces, `max-w-2xl` for practice/auth).
-- Builder card internals: `p-4`, prompt→outline `space-y-2`, outline well `p-2.5`.
+- Base 4px
+- Section rhythm: `space-y-8` page / `p-6` cards / `gap-4` rows
+- Page container: `max-w-7xl`
+- Workspace: `max-w-5xl` for reading surfaces
+- Practice/Auth: `max-w-2xl`
 
 ## Border radius
-- Cards/sections `rounded-xl` (12–16px); nested wells/inputs `rounded-lg`; badges/pills `rounded-full`; buttons `rounded-lg`; practice card `rounded-2xl`. One radius family, no pill-buttons except badges.
+- Cards/sections: `rounded-2xl` (16px)
+- Buttons/inputs: `rounded-lg` (8px) to `rounded-xl` (12px)
+- Badges/pills: `rounded-full`
+- Practice card: `rounded-2xl`
 
-## Shadows
-- Restraint: `shadow-md` cards on hover only (accent glow `shadow-indigo-500/10` for primary hover); `shadow-2xl` dialogs/practice card; none on flat sections. Depth comes from borders, not shadows.
+## Shadows & Effects
+- Cards: `shadow-lg` on hover with glow
+- Primary button: `shadow-lg shadow-neon/30`
+- Neon glow: `shadow-neon` (0 0 20px rgba(14, 165, 233, 0.3))
+- Frosted glass: `backdrop-blur-3xl saturate-180`
 
 ## Components
-- Card: `rounded-xl border border-slate-800 bg-slate-950 p-6`; header row with title + contextual action, `border-b border-slate-800 pb-3`; nested item `bg-slate-900`.
-- Buttons: primary `bg-indigo-600 hover:bg-indigo-500 text-white font-semibold` (+ `disabled:opacity-50`); secondary `border border-slate-800 bg-slate-900 hover:bg-slate-800`; danger-ghost (delete) `hover:text-red-400`; icon buttons `p-2` min 36px (44px on touch layouts); loading state = spinner + disabled + verb prefix ("Saving…").
-- Inputs: `bg-slate-900 border-slate-800 rounded-lg`, focus `border-indigo-500 + ring-1 ring-indigo-500 + outline-none`; labels 14/medium `slate-300`; hints/errors 12px with `aria-describedby`; textarea JD min 6 rows + char counter.
-- Dialogs: `max-w-2xl` (forms) / `max-w-md` (confirm), `bg-slate-950 border-slate-800 rounded-2xl`; focus trap + Esc (native); destructive confirms require explicit confirm button, never hover-delete.
-- Badges: `text-[10–11px] font-bold uppercase rounded px-2 py-0.5`; MUST `bg-red-500/20 text-red-300`; NICE `bg-slate-700/60 text-slate-300`; kind `bg-slate-800 text-slate-400`; edited `bg-amber-500/20 text-amber-300`; difficulty = 3 dots, not numbers alone.
-- Status indicators: badge + icon + text; running pulses (`animate-pulse` on badge only, never whole cards).
-- Tabs: workspace section tabs (Overview/Brief/Role/Questions/Coverage/Flashcards/Schedule) as underline tabs desktop, horizontal scroll-snap row on mobile; `aria-selected`, keyboard arrows.
-- Navigation: sidebar groups (Overview → My Kits, New Kit; Workspace → section anchors when in kit; Account → Profile, Sign out); icon-collapse on desktop; drawer on mobile; breadcrumb in header (Dashboard / Company / Section).
-- Stepper (generation): vertical `ol`, states done (emerald check) / current (indigo spinner + `aria-current="step"`) / pending (muted number) / failed (red alert); live message under current; auto-scroll; mobile condenses to "Stage X of 11" + current card.
-- Timeline (schedule): left rail + nodes; today = indigo ring + "Today" label; past = muted check; day card = focus + minutes chip + question links.
-- Quiz/practice: progress bar (thin, top), stage counter text ("Card 3 of 12"), flip card min-height 300px, gated 1–5 rating with text labels, results screen with weak recap.
-- Empty states: centered icon (`slate-600`, 40–48px) + 16 semibold title + 14 secondary description + primary action button. Mandatory everywhere lists can be empty.
-- Error states: `border-red-500/30 bg-red-500/10` card, server message verbatim, Retry button (same action) + secondary escape hatch (dashboard link). Generation failure = full error card, never a toast alone.
-- Loading states: `Skeleton` matching target shape (card rows for builder, grid for dashboard); spinners only inside buttons/current-step icon; practice/generation never show bare "Loading…" text without shape.
-- Toasts (Sonner or equivalent, to add): success/fail confirmation for save/delete/move/regenerate — non-blocking; errors also inline.
+
+### Card (Cyberpunk)
+```
+rounded-2xl border border-white/5 bg-cyber-surface/50 backdrop-blur p-6
+hover:border-neon/30 hover:shadow-neon transition-all duration-300
+```
+
+### Buttons
+- Primary: `bg-neon text-white font-semibold hover:bg-neon-bright shadow-lg shadow-neon/30`
+- Secondary: `border border-white/10 bg-white/[0.05] backdrop-blur text-slate-300 hover:bg-white/[0.08]`
+- Ghost: `text-slate-400 hover:text-white hover:bg-white/[0.05]`
+- Icon buttons: `p-2` min 36px (44px on touch)
+
+### Inputs
+- Default: `bg-cyber-bg/50 border border-white/10 rounded-xl backdrop-blur`
+- Focus: `border-neon ring-2 ring-neon/30`
+- Glass (auth): `bg-white/[0.05] backdrop-blur-xl border-white/10`
+
+### Badges
+- `text-[10-11px] font-bold uppercase rounded-full px-2 py-0.5 border`
+- MUST: `bg-red-500/20 text-red-300 border-red-500/30`
+- NICE: `bg-slate-700/60 text-slate-300 border-slate-600/50`
+
+### Status Indicators
+- Running: `status-pulse` animation (2s infinite)
+- Current step: Neon blue glow + spinner
+- Done: Emerald check
+
+### Tabs
+- Underline style with neon blue active indicator
+- `aria-selected`, keyboard arrows
+- Scrollable on mobile
+
+### Navigation
+- Sidebar: Dark steel background, neon blue active glow, collapsible
+- Mobile: Drawer with backdrop blur
+- Header: Breadcrumb with chevron separators
+
+### Stepper (Generation)
+- Vertical list with done/current/pending/failed states
+- Current: Neon blue glow + spinner + `aria-current="step"`
+- Auto-scroll to current
+
+### Timeline (Schedule)
+- Vertical rail with gradient connector
+- Today: Neon blue glow ring + "Today" badge
+- Past: Grayed with check
+- Day cards: Dark surface with question chips
+
+### Practice Card
+- Flip card with fade crossfade (not 3D)
+- Progress bar at top
+- 1-5 rating buttons with color coding
+
+### Empty/Error States
+- Centered icon + title + description + action
+- Error: Red border + server message verbatim + retry
+
+### Loading States
+- Skeleton with shimmer animation matching target shape
 
 ## Animation principles
-- Restrained: 150–250ms ease-out transitions; hover `scale-[1.01]` max on practice card only; `animate-spin` for active work; `animate-pulse` for running badges; page transitions none (App Router default); flip = opacity/translate crossfade, no 3D gimmick (readability first); `prefers-reduced-motion` respected (disable pulse/spin extras).
+- Durations: 150-400ms
+- Easing: `cubic-bezier(0.16, 1, 0.3, 1)` for smooth feel
+- Hover: Scale/glow transitions
+- Page load: Staggered fade-in with slide-up
+- Pulse: 2s infinite for running status
+- Neon glow: Alternate animation for current step
+- Respect `prefers-reduced-motion`
 
-## Responsive breakpoints (Tailwind defaults)
-- `base`: single column, drawer nav, scroll tabs, bottom-sheet dialogs, up/down reorder buttons, full-width CTAs.
-- `md` (768): 2-col grids (kits, requirements), modal dialogs, tab bar full.
-- `lg` (1024): sidebar icon-rail optional, auth split panel appears, 3-col kit grid.
-- `xl` (1280): full sidebar, `max-w-7xl` workspace.
-- Touch: ≥44px targets on mobile layouts; drag handle 40px; rating buttons full-width row wrap.
+## Responsive breakpoints
+- Base (0-767px): Mobile, drawer nav, stacked layouts
+- md (768px+): Tablet, 2-col grids
+- lg (1024px+): Desktop, sidebar expanded, full layouts
+- xl (1280px+): Large desktop, max-width containers
 
 ## Iconography
-lucide-react only (already in use). Fixed mapping: question categories (technical `Code2`, system-design `Network`, behavioural `MessagesSquare`, company-fit `Building2`), actions (edit `Edit2`/`Pencil`, delete `Trash2`, regen `RotateCw`, practice `Play`, schedule `Clock`/`CalendarDays`, coverage `CheckCircle2`/`AlertCircle`, drag `GripVertical`). No emoji in UI.
+lucide-react only. Fixed mapping for question categories and actions. No emoji in UI.
