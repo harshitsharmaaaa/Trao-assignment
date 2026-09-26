@@ -8,7 +8,7 @@
 #   MOCK_LLM=false
 #   ALLOW_LOCAL_URLS=false
 # NOTE: LLM_PROVIDER / LLM_MODEL are optional runtime-only overrides (code
-# defaults: provider=gemini, model=gemini-3.6-flash). Do NOT set them as
+# defaults: provider=gemini, model=gemini-3.5-flash-lite). Do NOT set them as
 # Netlify environment variables — Netlify Secrets Scanning flags dashboard
 # values that also appear in the repository/build output.
 [build]

@@ -66,7 +66,7 @@ describe("LLM 4-slot key pool + deterministic rotation", () => {
     setEnv({
       LLM_PROVIDER: "gemini",
       MOCK_LLM: "false",
-      LLM_MODEL: "gemini-3.6-flash",
+      LLM_MODEL: "gemini-3.5-flash-lite",
       LLM_REQUESTS_PER_MINUTE: "1000",
     });
     clearGeminiKeys();

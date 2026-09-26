@@ -259,7 +259,7 @@ export async function generateStructuredJson<T>(
 ): Promise<T> {
   const provider = process.env.LLM_PROVIDER || "gemini";
   const isMock = process.env.MOCK_LLM === "true" || provider === "mock";
-  const modelName = process.env.LLM_MODEL || "gemini-3.6-flash";
+  const modelName = process.env.LLM_MODEL || "gemini-3.5-flash-lite";
 
   if (isMock) {
     console.log("[LLM Client] MOCK_LLM is enabled. Using mock generation.");

@@ -36,7 +36,7 @@ flowchart TD
 5. **Company Brief & Role Analysis**:
    - Combine extracted JD facts + scraped pages + public interview research into `company_brief` and `role` breakdown.
 6. **Pass 1 Generation**:
-   - Model `LLM_MODEL=gemini-3.6-flash` generates questions for each category (`technical`, `behavioural`, `system-design`, `company-fit`) and flashcards (`front`, `back`, `requirement_ids`).
+   - Model `LLM_MODEL=gemini-3.5-flash-lite` generates questions for each category (`technical`, `behavioural`, `system-design`, `company-fit`) and flashcards (`front`, `back`, `requirement_ids`).
 7. **Deterministic Coverage Check**:
    - Compare `requirement_ids` in generated questions against extracted `must` requirement IDs.
 8. **Pass 2 Gap Generation (if needed)**:

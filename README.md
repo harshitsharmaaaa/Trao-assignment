@@ -8,7 +8,7 @@ A single, full-stack Next.js App Router application (Next.js + TypeScript + Bun 
 - **User Authentication**: Secure user registration, login, logout, and isolated kit ownership using JWT HTTP-only session cookies.
 - **Company Website Scraper & Link Ranker**: Cheerio-based crawler with SSRF protection that discovers hiring, careers, and engineering culture pages.
 - **Public Interview Process Research**: Dedicated external search module (`lib/retrieval/interviewSearch.ts`) that searches for public interview process discussions and engineering culture insights, handling zero results honestly.
-- **LLM Abstraction & Retries**: Gemini API provider (`LLM_MODEL=gemini-3.6-flash`) with exponential backoff retries and structured schema validation. Strict error handling ensures missing API keys throw explicit errors when `MOCK_LLM=false`.
+- **LLM Abstraction & Retries**: Gemini API provider (`LLM_MODEL=gemini-3.5-flash-lite`) with exponential backoff retries and structured schema validation. Strict error handling ensures missing API keys throw explicit errors when `MOCK_LLM=false`.
 - **Multi-Stage Pipeline Orchestrator**: Shared pipeline orchestrator used identically by API Route Handlers and CLI batch evaluation.
 - **Deterministic Domain Invariants**:
   - Deterministic requirement coverage checker (`must` vs `nice` requirements).
@@ -53,7 +53,7 @@ trao/
 ├── lib/                  # Server-only domain & infrastructure modules
 │   ├── db/               # Mongoose client & User/Kit models
 │   ├── retrieval/        # SSRF guard, Cheerio crawler, link ranker, interview search
-│   ├── llm/              # Gemini API client (gemini-3.6-flash) & backoff retries
+│   ├── llm/              # Gemini API client (gemini-3.5-flash-lite) & backoff retries
 │   ├── domain/           # Coverage checker, day scheduler, state merger, canonical mapper
 │   └── pipeline/         # Shared multi-stage pipeline orchestrator
 ├── schemas/              # Appendix A KitSchema & Appendix B BatchOutputSchema
@@ -77,7 +77,7 @@ Create `.env.local` at project root for local development. Never commit `.env.lo
 | `JWT_SECRET` | Secret key for JWT session cookies | Yes | 32+ char secret string | `local-dev-jwt-secret-key-32-chars-min` |
 | `GEMINI_API_KEY_1..4` | Google Gemini API keys — 4 independent project quota pools (Slot 1 = pre-existing project key; legacy single `GEMINI_API_KEY` still accepted as fallback) | Yes (when `MOCK_LLM=false`) | Real Gemini API keys | `""` |
 | `LLM_PROVIDER` | Optional local override: provider selection (`gemini` or `mock`); code default `gemini`, do not set in Netlify | No | `gemini` | `gemini` |
-| `LLM_MODEL` | Optional local override: model identifier; code default `gemini-3.6-flash`, do not set in Netlify | No | `gemini-3.6-flash` | `gemini-3.6-flash` |
+| `LLM_MODEL` | Optional local override: model identifier; code default `gemini-3.5-flash-lite`, do not set in Netlify | No | `gemini-3.5-flash-lite` | `gemini-3.5-flash-lite` |
 | `MOCK_LLM` | Enable mock LLM mode for testing (`true`/`false`) | No | `false` | `false` |
 | `ALLOW_LOCAL_URLS` | Permit loopback/localhost fetching in crawler | No (Prod: `false`) | `false` | `false` |
 
@@ -167,17 +167,17 @@ npm run evaluate -- --input cases.json --output kits.json
 ---
 
 ## Real-Gemini Verification Notes (Local Only)
-- Production uses a single Gemini project key with `LLM_MODEL=gemini-3.6-flash` and `MOCK_LLM=false`. There is no production key rotation.
+- Production uses a single Gemini project key with `LLM_MODEL=gemini-3.5-flash-lite` and `MOCK_LLM=false`. There is no production key rotation.
 - Local verification uses a 4-slot pool (`GEMINI_API_KEY_1..4`, Slot 1 = pre-existing project key) with deterministic `Slot 1 -> 2 -> 3 -> 4` rotation on daily project-quota exhaustion only (`GenerateRequestsPerDay*`); 503s, per-minute 429s, network blips, and malformed JSON stay on the same slot with existing retry/backoff. Legacy single `GEMINI_API_KEY` still works as a one-slot fallback.
 - `runPipeline()` makes 3–4 Gemini calls per case (extraction, brief + role, pass-1 generation, conditional gap fill), so a 5-case batch needs at least 15–20 successful calls before retries.
 
 ## Deployment
 Target host: Netlify (`netlify.toml` at repo root; build `npm run build`, publish `.next`; Next Runtime auto-applied).
 Production environment variables (host dashboard only, never committed):
-`MONGODB_URI` (Atlas), `JWT_SECRET`, `GEMINI_API_KEY_1` (single production project key), `MOCK_LLM=false`, `ALLOW_LOCAL_URLS=false`. (`LLM_PROVIDER`/`LLM_MODEL` are optional runtime-only overrides defaulting to `gemini`/`gemini-3.6-flash` in code — do not set them in Netlify.)
+`MONGODB_URI` (Atlas), `JWT_SECRET`, `GEMINI_API_KEY_1` (single production project key), `MOCK_LLM=false`, `ALLOW_LOCAL_URLS=false`. (`LLM_PROVIDER`/`LLM_MODEL` are optional runtime-only overrides defaulting to `gemini`/`gemini-3.5-flash-lite` in code — do not set them in Netlify.)
 Local production check: `bun run build` compiles cleanly (12 static + dynamic routes). Public URL pending site creation.
 
 ## Known Limitations
-- Gemini free tier (`gemini-3.6-flash`): ~20 generate requests/day and 5/min per Google Cloud project, plus occasional 503 demand spikes. A 5-case batch needs 15–20+ successful calls, so verification may require quota headroom or the documented multi-project local protocol.
+- Gemini free tier (`gemini-3.5-flash-lite`): ~20 generate requests/day and 5/min per Google Cloud project, plus occasional 503 demand spikes. A 5-case batch needs 15–20+ successful calls, so verification may require quota headroom or the documented multi-project local protocol.
 - Public interview research scrapes a public search endpoint and may honestly return zero snippets; the pipeline records the gap instead of fabricating.
 - Local MongoDB suffices for development; production requires MongoDB Atlas.
