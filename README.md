@@ -76,8 +76,8 @@ Create `.env.local` at project root for local development. Never commit `.env.lo
 | `MONGODB_URI` | MongoDB connection string | Yes (Prod) | `mongodb://localhost:27017/trao` | `mongodb://localhost:27017/trao` |
 | `JWT_SECRET` | Secret key for JWT session cookies | Yes | 32+ char secret string | `local-dev-jwt-secret-key-32-chars-min` |
 | `GEMINI_API_KEY_1..4` | Google Gemini API keys — 4 independent project quota pools (Slot 1 = pre-existing project key; legacy single `GEMINI_API_KEY` still accepted as fallback) | Yes (when `MOCK_LLM=false`) | Real Gemini API keys | `""` |
-| `LLM_PROVIDER` | LLM provider selection (`gemini` or `mock`) | No | `gemini` | `gemini` |
-| `LLM_MODEL` | Gemini LLM model identifier | No | `gemini-3.6-flash` | `gemini-3.6-flash` |
+| `LLM_PROVIDER` | Optional local override: provider selection (`gemini` or `mock`); code default `gemini`, do not set in Netlify | No | `gemini` | `gemini` |
+| `LLM_MODEL` | Optional local override: model identifier; code default `gemini-3.6-flash`, do not set in Netlify | No | `gemini-3.6-flash` | `gemini-3.6-flash` |
 | `MOCK_LLM` | Enable mock LLM mode for testing (`true`/`false`) | No | `false` | `false` |
 | `ALLOW_LOCAL_URLS` | Permit loopback/localhost fetching in crawler | No (Prod: `false`) | `false` | `false` |
 
@@ -174,7 +174,7 @@ npm run evaluate -- --input cases.json --output kits.json
 ## Deployment
 Target host: Netlify (`netlify.toml` at repo root; build `npm run build`, publish `.next`; Next Runtime auto-applied).
 Production environment variables (host dashboard only, never committed):
-`MONGODB_URI` (Atlas), `JWT_SECRET`, `GEMINI_API_KEY` (single production project key), `LLM_PROVIDER=gemini`, `LLM_MODEL=gemini-3.6-flash`, `MOCK_LLM=false`, `ALLOW_LOCAL_URLS=false`.
+`MONGODB_URI` (Atlas), `JWT_SECRET`, `GEMINI_API_KEY_1` (single production project key), `MOCK_LLM=false`, `ALLOW_LOCAL_URLS=false`. (`LLM_PROVIDER`/`LLM_MODEL` are optional runtime-only overrides defaulting to `gemini`/`gemini-3.6-flash` in code — do not set them in Netlify.)
 Local production check: `bun run build` compiles cleanly (12 static + dynamic routes). Public URL pending site creation.
 
 ## Known Limitations
