@@ -1,45 +1,67 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import * as React from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
-  ArrowLeft,
-  RotateCw,
-  Play,
-  Trash2,
-  Edit2,
-  Plus,
-  CheckCircle,
   AlertCircle,
-  Clock,
+  Play,
   Sparkles,
   ExternalLink,
+  Clock,
+  CheckCircle2,
+  RotateCw,
+  Pencil,
+  Trash2,
+  Check,
+  X,
+  BookOpen,
 } from "lucide-react";
+import { toast } from "sonner";
+import { AppShell } from "@/components/layout/app-shell";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/empty-state";
+import { ErrorCard } from "@/components/ui/error-card";
+import { SkeletonCardList } from "@/components/ui/skeleton";
+import { SaveStateIndicator } from "@/components/ui/save-state";
+import { StageSteps } from "@/components/generation/stage-steps";
+import { ScheduleTimeline } from "@/components/schedule/schedule-timeline";
+import { cn } from "@/lib/utils";
+import { useKitBuilder } from "@/components/builder/use-kit-builder";
+import { QuestionBuilder } from "@/components/builder/question-builder";
+import type { BuilderRequirement } from "@/components/builder/types";
+
+type TabId = "overview" | "brief" | "role" | "questions" | "coverage" | "flashcards" | "schedule";
+
+const TABS: { id: TabId; label: string }[] = [
+  { id: "overview", label: "Overview" },
+  { id: "brief", label: "Company Brief" },
+  { id: "role", label: "Role & Requirements" },
+  { id: "questions", label: "Questions" },
+  { id: "coverage", label: "Coverage" },
+  { id: "flashcards", label: "Flashcards" },
+  { id: "schedule", label: "Schedule" },
+];
 
 export default function KitDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter();
-  const [data, setData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [regeneratingSection, setRegeneratingSection] = useState<string | null>(null);
-  const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
-  const [editPrompt, setEditPrompt] = useState("");
-  const [editOutline, setEditOutline] = useState("");
+  const [data, setData] = React.useState<any>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [tab, setTab] = React.useState<TabId>("overview");
+  const [briefRegen, setBriefRegen] = React.useState(false);
+  const [briefConfirm, setBriefConfirm] = React.useState(false);
+  const [briefError, setBriefError] = React.useState<string | null>(null);
+  const [reqFilter, setReqFilter] = React.useState<"all" | "must" | "nice">("all");
+  const [editingFlashId, setEditingFlashId] = React.useState<string | null>(null);
+  const [flashFront, setFlashFront] = React.useState("");
+  const [flashBack, setFlashBack] = React.useState("");
+  const [confirmFlashDelete, setConfirmFlashDelete] = React.useState<string | null>(null);
 
-  useEffect(() => {
-    fetchKitData();
+  const builder = useKitBuilder(params.id);
+  const hydratedForRef = React.useRef<string | null>(null);
 
-    // Auto-poll status if kit is running
-    const interval = setInterval(() => {
-      if (data && (data.status === "running" || data.status === "queued")) {
-        fetchKitData();
-      }
-    }, 2000);
-
-    return () => clearInterval(interval);
-  }, [data?.status]);
-
-  const fetchKitData = async () => {
+  const fetchKitData = React.useCallback(async () => {
     try {
       const res = await fetch(`/api/kits/${params.id}`);
       if (!res.ok) {
@@ -53,430 +75,610 @@ export default function KitDetailPage({ params }: { params: { id: string } }) {
     } finally {
       setLoading(false);
     }
+  }, [params.id, router]);
+
+  React.useEffect(() => {
+    fetchKitData();
+  }, [fetchKitData]);
+
+  // Poll while the pipeline is running (unchanged cadence).
+  React.useEffect(() => {
+    if (!data || (data.status !== "running" && data.status !== "queued")) return;
+    const interval = setInterval(fetchKitData, 2000);
+    return () => clearInterval(interval);
+  }, [data?.status, fetchKitData]);
+
+  // Hydrate the builder exactly once per kit (never clobber optimistic edits).
+  const internalKit = data?.internalKit;
+  React.useEffect(() => {
+    if (data?.status === "ok" && internalKit && hydratedForRef.current !== params.id) {
+      hydratedForRef.current = params.id;
+      builder.hydrate(internalKit.questions ?? [], internalKit.flashcards ?? []);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data?.status, params.id]);
+
+  const handleLogout = async () => {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.push("/login");
   };
 
-  const handleRegenerateSection = async (section: string) => {
-    setRegeneratingSection(section);
+  const jumpToQuestion = (questionId: string) => {
+    setTab("questions");
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        document.getElementById(`question-${questionId}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 60);
+    });
+  };
+
+  const handleRegenerateBrief = async () => {
+    setBriefConfirm(false);
+    setBriefError(null);
+    setBriefRegen(true);
     try {
       const res = await fetch(`/api/kits/${params.id}/regenerate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ section }),
+        body: JSON.stringify({ section: "company_brief" }),
       });
-
-      if (res.ok) {
-        await fetchKitData();
-      }
-    } catch (err) {
-      console.error(err);
+      const payload = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(payload?.error || payload?.details || "Regeneration failed");
+      toast.success("Company brief regenerated");
+      await fetchKitData();
+    } catch (err: any) {
+      setBriefError(err?.message || "Regeneration failed");
+      toast.error("Brief regeneration failed", { description: err?.message });
     } finally {
-      setRegeneratingSection(null);
+      setBriefRegen(false);
     }
   };
 
-  const handleSaveQuestionEdit = async (questionId: string) => {
-    if (!data?.internalKit) return;
-    const updatedQuestions = data.internalKit.questions.map((q: any) => {
-      if (q.id === questionId) {
-        return {
-          ...q,
-          prompt: editPrompt,
-          answer_outline: editOutline,
-          user_edited: true,
-        };
-      }
-      return q;
-    });
-
-    try {
-      const res = await fetch(`/api/kits/${params.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ questions: updatedQuestions }),
-      });
-      if (res.ok) {
-        setEditingQuestionId(null);
-        await fetchKitData();
-      }
-    } catch (err) {
-      console.error(err);
-    }
+  const startFlashEdit = (card: any) => {
+    setEditingFlashId(card.id);
+    setFlashFront(card.front);
+    setFlashBack(card.back);
+    setConfirmFlashDelete(null);
   };
 
-  const handleDeleteQuestion = async (questionId: string) => {
-    if (!data?.internalKit) return;
-    const updatedQuestions = data.internalKit.questions.filter((q: any) => q.id !== questionId);
-    try {
-      const res = await fetch(`/api/kits/${params.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ questions: updatedQuestions }),
-      });
-      if (res.ok) await fetchKitData();
-    } catch (err) {
-      console.error(err);
+  const saveFlashEdit = (id: string) => {
+    if (!flashFront.trim() || !flashBack.trim()) {
+      toast.error("Front and back cannot be empty");
+      return;
     }
-  };
-
-  const handleMoveQuestionCategory = async (questionId: string, newCategory: string) => {
-    if (!data?.internalKit) return;
-    const updatedQuestions = data.internalKit.questions.map((q: any) => {
-      if (q.id === questionId) {
-        return { ...q, category: newCategory, user_edited: true };
-      }
-      return q;
-    });
-
-    try {
-      const res = await fetch(`/api/kits/${params.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ questions: updatedQuestions }),
-      });
-      if (res.ok) await fetchKitData();
-    } catch (err) {
-      console.error(err);
-    }
+    builder.updateFlashcards((prev) =>
+      prev.map((f) => (f.id === id ? { ...f, front: flashFront.trim(), back: flashBack.trim(), user_edited: true } : f))
+    );
+    setEditingFlashId(null);
+    toast.success("Flashcard updated");
   };
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center text-slate-400">
-        Loading kit details...
-      </div>
+      <AppShell email={null} onSignOut={handleLogout} breadcrumbs={[{ label: "My Kits", href: "/" }, { label: "Loading…" }]}>
+        <SkeletonCardList rows={4} />
+      </AppShell>
     );
   }
 
-  const internalKit = data?.internalKit;
   const externalKit = data?.kit;
+  const requirements: BuilderRequirement[] = externalKit?.role?.requirements ?? [];
+  const questions = builder.questions;
+  const flashcards = builder.flashcards;
 
-  // View 1: Generation in Progress
+  // View 1: Generation in Progress (real stage visualization, 2s polling).
   if (data?.status === "running" || data?.status === "queued") {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-slate-900 p-6 text-center">
-        <div className="w-full max-w-md space-y-6 rounded-2xl border border-slate-800 bg-slate-950 p-8 shadow-2xl">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-indigo-600/20 text-indigo-400 animate-spin">
-            <Sparkles className="h-8 w-8" />
-          </div>
-          <div>
-            <h2 className="text-2xl font-bold text-white">Generating Your Prep Kit</h2>
-            <p className="mt-2 text-sm text-indigo-400 font-medium">
-              Stage: {data.progress?.stage || "Processing"}
-            </p>
-            <p className="mt-1 text-xs text-slate-400">
-              {data.progress?.message || "Researching company website and generating role breakdown..."}
+      <AppShell email={null} onSignOut={handleLogout} breadcrumbs={[{ label: "My Kits", href: "/" }, { label: "Generating…" }]}>
+        <div className="mx-auto w-full max-w-xl space-y-5 rounded-2xl border border-slate-800 bg-slate-950 p-6 shadow-2xl sm:p-8">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold tracking-tight text-white">Generating Your Prep Kit</h1>
+            <p className="mt-1 text-sm text-slate-400">
+              Researching, writing and scheduling — this usually takes a few minutes. You can leave
+              and come back; progress is saved.
             </p>
           </div>
-          <div className="w-full bg-slate-900 rounded-full h-2 overflow-hidden">
-            <div className="bg-indigo-500 h-full animate-pulse w-3/4"></div>
+          <StageSteps stage={data.progress?.stage || "queued"} message={data.progress?.message || ""} />
+          <div className="flex justify-center">
+            <Link href="/" className="text-sm font-medium text-slate-400 hover:text-white">
+              ← Back to dashboard (generation continues)
+            </Link>
           </div>
         </div>
-      </div>
+      </AppShell>
     );
   }
 
-  // View 2: Fatal Failure
+  // View 2: Fatal Failure.
   if (data?.status === "failed") {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-slate-900 p-6 text-center">
-        <div className="w-full max-w-md space-y-4 rounded-2xl border border-red-500/30 bg-slate-950 p-8 shadow-2xl">
-          <AlertCircle className="mx-auto h-12 w-12 text-red-400" />
-          <h2 className="text-xl font-bold text-white">Generation Failed</h2>
-          <p className="text-sm text-slate-400">{data.error?.message || "Could not generate kit."}</p>
+      <AppShell email={null} onSignOut={handleLogout} breadcrumbs={[{ label: "My Kits", href: "/" }, { label: "Failed" }]}>
+        <div className="flex flex-col items-center py-10">
+          <ErrorCard
+            title="Generation Failed"
+            message={data.error?.message || "Could not generate kit."}
+            secondaryAction={
+              <Link
+                href="/"
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
+              >
+                Return to Dashboard
+              </Link>
+            }
+          />
+        </div>
+      </AppShell>
+    );
+  }
+
+  const mustReqs = requirements.filter((r) => r.priority === "must");
+  const coveredIds = new Set(questions.flatMap((q) => q.requirement_ids));
+  const uncoveredMust = mustReqs.filter((r) => !coveredIds.has(r.id));
+  const filteredReqs = reqFilter === "all" ? requirements : requirements.filter((r) => r.priority === reqFilter);
+
+  const onTabKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+    e.preventDefault();
+    const idx = TABS.findIndex((t) => t.id === tab);
+    const next = e.key === "ArrowRight" ? (idx + 1) % TABS.length : (idx - 1 + TABS.length) % TABS.length;
+    setTab(TABS[next].id);
+  };
+
+  return (
+    <AppShell
+      email={null}
+      onSignOut={handleLogout}
+      breadcrumbs={[
+        { label: "My Kits", href: "/" },
+        { label: externalKit?.source?.company || "Kit" },
+      ]}
+    >
+      {/* Workspace header */}
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="truncate text-2xl font-bold tracking-tight text-white">
+            {externalKit?.source?.role || "Interview Prep Kit"}
+          </h1>
+          <p className="mt-0.5 text-sm text-indigo-400">
+            {externalKit?.source?.company}
+            {externalKit?.role?.seniority ? ` · ${externalKit.role.seniority}` : ""}
+          </p>
+        </div>
+        <div className="flex shrink-0 items-center gap-3">
+          <SaveStateIndicator state={builder.saveState} />
           <Link
-            href="/"
-            className="inline-block rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
+            href={`/kits/${params.id}/practice`}
+            className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-md transition hover:bg-indigo-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
           >
-            Return to Dashboard
+            <Play className="h-4 w-4 fill-white" aria-hidden="true" />
+            Practice
           </Link>
         </div>
       </div>
-    );
-  }
 
-  // View 3: Complete Reshapeable Builder View
-  return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 pb-16">
-      {/* Top Bar */}
-      <header className="sticky top-0 z-40 border-b border-slate-800 bg-slate-950/90 backdrop-blur px-6 py-4">
-        <div className="mx-auto flex max-w-7xl items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link
-              href="/"
-              className="flex items-center gap-1.5 text-sm font-medium text-slate-400 hover:text-white"
-            >
-              <ArrowLeft className="h-4 w-4" /> Back
-            </Link>
-            <div>
-              <h1 className="text-lg font-bold text-white">{externalKit?.source?.role || "Interview Prep Kit"}</h1>
-              <p className="text-xs text-indigo-400">{externalKit?.source?.company}</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <Link
-              href={`/kits/${params.id}/practice`}
-              className="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 shadow-md"
-            >
-              <Play className="h-4 w-4 fill-white" />
-              Practice Flashcards
-            </Link>
-          </div>
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-7xl px-6 py-8 space-y-10">
-        {/* Source & Research Badges */}
-        <section className="rounded-xl border border-slate-800 bg-slate-950 p-6">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Research Summary</span>
-              <h2 className="text-2xl font-bold text-white mt-1">{externalKit?.source?.company}</h2>
-              <a
-                href={externalKit?.source?.company_url}
-                target="_blank"
-                rel="noreferrer"
-                className="mt-1 inline-flex items-center gap-1 text-xs text-indigo-400 hover:underline"
-              >
-                {externalKit?.source?.company_url} <ExternalLink className="h-3 w-3" />
-              </a>
-            </div>
-
-            <div className="flex gap-4 text-xs text-slate-400">
-              <div className="rounded-lg bg-slate-900 p-3">
-                <span className="block text-slate-500 font-medium">JD Characters</span>
-                <span className="text-sm font-bold text-white">{externalKit?.source?.jd_chars}</span>
-              </div>
-              <div className="rounded-lg bg-slate-900 p-3">
-                <span className="block text-slate-500 font-medium">Pages Crawled</span>
-                <span className="text-sm font-bold text-white">{externalKit?.source?.pages_used?.length || 0}</span>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Company Brief */}
-        <section className="rounded-xl border border-slate-800 bg-slate-950 p-6 space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-            <h3 className="text-lg font-bold text-white flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-indigo-400" />
-              Company Brief
-            </h3>
+      {/* Section tabs */}
+      <div className="sticky top-16 z-20 -mx-4 mb-6 border-b border-slate-800 bg-slate-900/95 px-4 backdrop-blur md:-mx-6 md:px-6">
+        <div
+          role="tablist"
+          aria-label="Kit sections"
+          onKeyDown={onTabKeyDown}
+          className="flex gap-1 overflow-x-auto"
+        >
+          {TABS.map((t) => (
             <button
-              onClick={() => handleRegenerateSection("company_brief")}
-              disabled={regeneratingSection === "company_brief"}
-              className="flex items-center gap-1.5 text-xs font-medium text-slate-400 hover:text-white disabled:opacity-50"
+              key={t.id}
+              role="tab"
+              aria-selected={tab === t.id}
+              aria-controls={`panel-${t.id}`}
+              id={`tab-${t.id}`}
+              tabIndex={tab === t.id ? 0 : -1}
+              onClick={() => setTab(t.id)}
+              className={cn(
+                "whitespace-nowrap border-b-2 px-3 py-3 text-sm font-medium transition duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500",
+                tab === t.id
+                  ? "border-indigo-500 text-white"
+                  : "border-transparent text-slate-400 hover:border-slate-700 hover:text-slate-200"
+              )}
             >
-              <RotateCw className={`h-3.5 w-3.5 ${regeneratingSection === "company_brief" ? "animate-spin" : ""}`} />
-              Regenerate Brief
+              {t.label}
+              {t.id === "questions" && (
+                <span className="ml-1.5 rounded-full bg-slate-800 px-1.5 py-0.5 text-[11px] tabular-nums text-slate-300">
+                  {questions.length}
+                </span>
+              )}
             </button>
-          </div>
+          ))}
+        </div>
+      </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
-            <div className="rounded-lg bg-slate-900 p-4">
-              <h4 className="font-semibold text-indigo-300 mb-1">Company Summary</h4>
-              <p className="text-slate-300 leading-relaxed">{externalKit?.company_brief?.summary}</p>
-            </div>
-            <div className="rounded-lg bg-slate-900 p-4">
-              <h4 className="font-semibold text-indigo-300 mb-1">What They Do</h4>
-              <p className="text-slate-300 leading-relaxed">{externalKit?.company_brief?.what_they_do}</p>
-            </div>
-          </div>
-        </section>
-
-        {/* Role Breakdown & Extracted Requirements */}
-        <section className="rounded-xl border border-slate-800 bg-slate-950 p-6 space-y-4">
-          <h3 className="text-lg font-bold text-white border-b border-slate-800 pb-3">
-            Extracted Role Requirements ({externalKit?.role?.requirements?.length || 0})
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {externalKit?.role?.requirements?.map((req: any) => (
-              <div key={req.id} className="flex items-start justify-between rounded-lg border border-slate-800 bg-slate-900 p-3">
-                <div>
-                  <span className="text-xs font-bold text-indigo-400 uppercase mr-2">{req.id}</span>
-                  <span className="text-sm text-slate-200">{req.text}</span>
+      {/* Panels */}
+      {tab === "overview" && (
+        <div role="tabpanel" id="panel-overview" aria-labelledby="tab-overview" className="space-y-6">
+          <section className="rounded-xl border border-slate-800 bg-slate-950 p-6">
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Research summary</p>
+            <h2 className="mt-1 text-2xl font-bold text-white">{externalKit?.source?.company}</h2>
+            <a
+              href={externalKit?.source?.company_url}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-1 inline-flex items-center gap-1 text-xs text-indigo-400 hover:underline"
+            >
+              {externalKit?.source?.company_url} <ExternalLink className="h-3 w-3" aria-hidden="true" />
+            </a>
+            <dl className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+              {[
+                ["Requirements", String(requirements.length)],
+                ["Questions", String(questions.length)],
+                ["Flashcards", String(flashcards.length)],
+                ["Study days", String(externalKit?.schedule?.days_available ?? "—")],
+              ].map(([label, value]) => (
+                <div key={label} className="rounded-lg bg-slate-900 p-3">
+                  <dt className="text-xs font-medium text-slate-500">{label}</dt>
+                  <dd className="text-lg font-bold tabular-nums text-white">{value}</dd>
                 </div>
-                <div className="flex items-center gap-1.5 ml-2">
-                  <span className={`px-2 py-0.5 text-[10px] font-bold rounded uppercase ${req.priority === "must" ? "bg-red-500/20 text-red-300" : "bg-slate-700 text-slate-300"}`}>
-                    {req.priority}
-                  </span>
-                  <span className="px-2 py-0.5 text-[10px] font-medium bg-slate-800 text-slate-400 rounded">
-                    {req.kind}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
+              ))}
+            </dl>
+          </section>
+          <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            {(
+              [
+                ["questions", "Review & edit your question bank", `${questions.length} question${questions.length === 1 ? "" : "s"}`],
+                ["practice", "Drill flashcards weakest-first", `${flashcards.length} card${flashcards.length === 1 ? "" : "s"}`],
+                ["schedule", "See today's study plan", `${externalKit?.schedule?.days_available ?? 0} days`],
+              ] as const
+            ).map(([target, title, meta]) =>
+              target === "practice" ? (
+                <Link
+                  key={target}
+                  href={`/kits/${params.id}/practice`}
+                  className="rounded-xl border border-slate-800 bg-slate-950 p-5 transition hover:border-indigo-500/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                >
+                  <p className="font-semibold text-white">{title}</p>
+                  <p className="mt-1 text-xs text-slate-400">{meta}</p>
+                </Link>
+              ) : (
+                <button
+                  key={target}
+                  onClick={() => setTab(target)}
+                  className="rounded-xl border border-slate-800 bg-slate-950 p-5 text-left transition hover:border-indigo-500/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                >
+                  <p className="font-semibold text-white">{title}</p>
+                  <p className="mt-1 text-xs text-slate-400">{meta}</p>
+                </button>
+              )
+            )}
+          </section>
+        </div>
+      )}
 
-        {/* Question Bank with Category Regeneration */}
-        <section className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xl font-bold text-white">Categorized Question Bank</h3>
-          </div>
-
-          {["technical", "system-design", "behavioural", "company-fit"].map((category) => {
-            const categoryQuestions = internalKit?.questions?.filter((q: any) => q.category === category) || [];
-            return (
-              <div key={category} className="rounded-xl border border-slate-800 bg-slate-950 p-6 space-y-4">
-                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                  <h4 className="text-md font-bold text-white capitalize flex items-center gap-2">
-                    <span className="h-2 w-2 rounded-full bg-indigo-500"></span>
-                    {category.replace("-", " ")} Questions ({categoryQuestions.length})
-                  </h4>
-                  <button
-                    onClick={() => handleRegenerateSection(category)}
-                    disabled={regeneratingSection === category}
-                    className="flex items-center gap-1.5 text-xs font-medium text-slate-400 hover:text-white disabled:opacity-50"
-                  >
-                    <RotateCw className={`h-3.5 w-3.5 ${regeneratingSection === category ? "animate-spin" : ""}`} />
-                    Regenerate Category
+      {tab === "brief" && (
+        <div role="tabpanel" id="panel-brief" aria-labelledby="tab-brief" className="space-y-4">
+          <section className="rounded-xl border border-slate-800 bg-slate-950 p-6">
+            <div className="flex items-center justify-between gap-3 border-b border-slate-800 pb-3">
+              <h2 className="flex items-center gap-2 text-lg font-bold text-white">
+                <Sparkles className="h-5 w-5 text-indigo-400" aria-hidden="true" />
+                Company Brief
+              </h2>
+              <Button variant="ghost" size="sm" onClick={() => { setBriefError(null); setBriefConfirm(true); }} loading={briefRegen}>
+                <RotateCw className="h-3.5 w-3.5" aria-hidden="true" /> Regenerate
+              </Button>
+            </div>
+            {briefError && (
+              <div role="alert" className="mt-3 flex items-start gap-2 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                <span>
+                  Regeneration failed: {briefError}{" "}
+                  <button onClick={handleRegenerateBrief} className="font-semibold underline hover:text-red-200">
+                    Retry
                   </button>
-                </div>
+                </span>
+              </div>
+            )}
+            <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="rounded-lg bg-slate-900 p-4">
+                <h3 className="mb-1 font-semibold text-indigo-300">Company Summary</h3>
+                <p className="max-w-[70ch] text-sm leading-relaxed text-slate-300">{externalKit?.company_brief?.summary}</p>
+              </div>
+              <div className="rounded-lg bg-slate-900 p-4">
+                <h3 className="mb-1 font-semibold text-indigo-300">What They Do</h3>
+                <p className="max-w-[70ch] text-sm leading-relaxed text-slate-300">{externalKit?.company_brief?.what_they_do}</p>
+              </div>
+            </div>
+            {externalKit?.company_brief?.sources?.length > 0 && (
+              <div className="mt-4">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500">Research sources</h3>
+                <ul className="mt-2 space-y-1">
+                  {externalKit.company_brief.sources.map((s: string) => (
+                    <li key={s}>
+                      <a href={s} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-indigo-400 hover:underline">
+                        <span className="truncate">{s}</span> <ExternalLink className="h-3 w-3 shrink-0" aria-hidden="true" />
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </section>
+        </div>
+      )}
 
-                <div className="space-y-4">
-                  {categoryQuestions.map((q: any) => (
-                    <div key={q.id} className="rounded-lg border border-slate-800 bg-slate-900 p-4 space-y-2">
-                      {editingQuestionId === q.id ? (
-                        <div className="space-y-3">
-                          <input
-                            type="text"
-                            value={editPrompt}
-                            onChange={(e) => setEditPrompt(e.target.value)}
-                            className="w-full rounded bg-slate-950 p-2 text-sm text-white border border-slate-700"
-                          />
-                          <textarea
-                            rows={3}
-                            value={editOutline}
-                            onChange={(e) => setEditOutline(e.target.value)}
-                            className="w-full rounded bg-slate-950 p-2 text-sm text-slate-300 border border-slate-700"
-                          />
-                          <div className="flex justify-end gap-2">
-                            <button
-                              onClick={() => setEditingQuestionId(null)}
-                              className="px-3 py-1 text-xs text-slate-400 hover:text-white"
-                            >
-                              Cancel
-                            </button>
-                            <button
-                              onClick={() => handleSaveQuestionEdit(q.id)}
-                              className="px-3 py-1 text-xs bg-indigo-600 text-white rounded font-medium"
-                            >
-                              Save Edit
-                            </button>
-                          </div>
-                        </div>
+      {tab === "role" && (
+        <div role="tabpanel" id="panel-role" aria-labelledby="tab-role" className="space-y-4">
+          <section className="rounded-xl border border-slate-800 bg-slate-950 p-6">
+            <div className="flex flex-col gap-3 border-b border-slate-800 pb-3 sm:flex-row sm:items-center sm:justify-between">
+              <h2 className="text-lg font-bold text-white">
+                Role Requirements <span className="text-sm font-semibold tabular-nums text-slate-400">({filteredReqs.length}/{requirements.length})</span>
+              </h2>
+              <div className="flex gap-1.5" role="radiogroup" aria-label="Filter requirements">
+                {(["all", "must", "nice"] as const).map((f) => (
+                  <button
+                    key={f}
+                    role="radio"
+                    aria-checked={reqFilter === f}
+                    onClick={() => setReqFilter(f)}
+                    className={cn(
+                      "rounded-lg border px-3 py-1.5 text-xs font-semibold capitalize transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500",
+                      reqFilter === f ? "border-indigo-500 bg-indigo-600/15 text-white" : "border-slate-700 text-slate-400 hover:border-slate-600"
+                    )}
+                  >
+                    {f}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {externalKit?.role?.responsibilities?.length > 0 && (
+              <ul className="mt-4 list-disc space-y-1 pl-5 text-sm text-slate-300">
+                {externalKit.role.responsibilities.map((r: string, i: number) => (
+                  <li key={i}>{r}</li>
+                ))}
+              </ul>
+            )}
+            <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+              {filteredReqs.map((req) => {
+                const covering = questions.filter((q) => q.requirement_ids.includes(req.id));
+                return (
+                  <div key={req.id} className="rounded-lg border border-slate-800 bg-slate-900 p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="text-sm text-slate-200">
+                        <span className="mr-2 font-mono text-xs font-bold uppercase text-indigo-400">{req.id}</span>
+                        {req.text}
+                      </p>
+                      <span className="flex shrink-0 items-center gap-1.5">
+                        <Badge variant={req.priority === "must" ? "must" : "nice"}>{req.priority}</Badge>
+                        <Badge variant="kind">{req.kind}</Badge>
+                      </span>
+                    </div>
+                    <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                      {covering.length === 0 ? (
+                        <span className="inline-flex items-center gap-1 text-xs text-red-400">
+                          <AlertCircle className="h-3.5 w-3.5" aria-hidden="true" /> Uncovered
+                        </span>
                       ) : (
-                        <>
-                          <div className="flex items-start justify-between">
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs font-bold text-indigo-400">{q.id}</span>
-                              <span className="text-xs text-slate-500">Requirements: [{q.requirement_ids.join(", ")}]</span>
-                              {q.user_edited && (
-                                <span className="px-1.5 py-0.5 text-[9px] bg-amber-500/20 text-amber-300 font-bold rounded">
-                                  User Edited (Preserved)
-                                </span>
-                              )}
-                            </div>
-
-                            <div className="flex items-center gap-2">
-                              {/* Move category selector */}
-                              <select
-                                value={q.category}
-                                onChange={(e) => handleMoveQuestionCategory(q.id, e.target.value)}
-                                className="bg-slate-950 text-xs text-slate-400 rounded border border-slate-800 px-2 py-1"
-                              >
-                                <option value="technical">Technical</option>
-                                <option value="system-design">System Design</option>
-                                <option value="behavioural">Behavioural</option>
-                                <option value="company-fit">Company Fit</option>
-                              </select>
-
-                              <button
-                                onClick={() => {
-                                  setEditingQuestionId(q.id);
-                                  setEditPrompt(q.prompt);
-                                  setEditOutline(q.answer_outline);
-                                }}
-                                className="text-slate-400 hover:text-white p-1"
-                              >
-                                <Edit2 className="h-3.5 w-3.5" />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteQuestion(q.id)}
-                                className="text-slate-400 hover:text-red-400 p-1"
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </button>
-                            </div>
-                          </div>
-
-                          <p className="text-sm font-semibold text-white">{q.prompt}</p>
-                          <p className="text-xs text-slate-400 leading-relaxed bg-slate-950/50 p-2.5 rounded border border-slate-800/50">
-                            <span className="font-semibold text-slate-500 block mb-1">Answer Outline:</span>
-                            {q.answer_outline}
-                          </p>
-                        </>
+                        covering.map((q) => (
+                          <button
+                            key={q.id}
+                            onClick={() => jumpToQuestion(q.id)}
+                            title={q.prompt}
+                            className="rounded-full bg-slate-800 px-2 py-0.5 font-mono text-[11px] text-indigo-300 hover:bg-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                          >
+                            {q.id}
+                          </button>
+                        ))
                       )}
                     </div>
-                  ))}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        </div>
+      )}
+
+      {tab === "questions" && (
+        <div role="tabpanel" id="panel-questions" aria-labelledby="tab-questions">
+          <QuestionBuilder
+            kitId={params.id}
+            requirements={requirements}
+            builder={builder}
+            onRegenerated={fetchKitData}
+          />
+        </div>
+      )}
+
+      {tab === "coverage" && (
+        <div role="tabpanel" id="panel-coverage" aria-labelledby="tab-coverage" className="space-y-4">
+          <section className="rounded-xl border border-slate-800 bg-slate-950 p-6">
+            <h2 className="border-b border-slate-800 pb-3 text-lg font-bold text-white">Coverage Status</h2>
+            <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex-1">
+                <div className="flex justify-between text-xs text-slate-400">
+                  <span>MUST requirements covered</span>
+                  <span className="tabular-nums">
+                    {mustReqs.length - uncoveredMust.length}/{mustReqs.length}
+                  </span>
+                </div>
+                <div className="mt-1 h-2 overflow-hidden rounded-full bg-slate-800" role="progressbar" aria-label="MUST coverage" aria-valuenow={mustReqs.length - uncoveredMust.length} aria-valuemin={0} aria-valuemax={Math.max(1, mustReqs.length)}>
+                  <div
+                    className={cn("h-full transition-all", uncoveredMust.length === 0 ? "bg-emerald-500" : "bg-amber-500")}
+                    style={{ width: `${mustReqs.length === 0 ? 100 : ((mustReqs.length - uncoveredMust.length) / mustReqs.length) * 100}%` }}
+                  />
                 </div>
               </div>
-            );
-          })}
-        </section>
-
-        {/* Study Schedule */}
-        <section className="rounded-xl border border-slate-800 bg-slate-950 p-6 space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-            <div>
-              <h3 className="text-lg font-bold text-white">Day-by-Day Study Schedule</h3>
-              <p className="text-xs text-slate-400">Allocated deterministically across {externalKit?.schedule?.days_available} days</p>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            {externalKit?.schedule?.days?.map((day: any) => (
-              <div key={day.day} className="flex items-center justify-between rounded-lg border border-slate-800 bg-slate-900 p-4">
-                <div>
-                  <span className="text-xs font-bold text-indigo-400 uppercase">Day {day.day}</span>
-                  <h4 className="text-sm font-semibold text-white mt-0.5">{day.focus}</h4>
-                  <p className="text-xs text-slate-500 mt-1">Questions: [{day.question_ids?.join(", ")}]</p>
-                </div>
-                <div className="flex items-center gap-1.5 text-xs text-slate-400 font-medium">
-                  <Clock className="h-4 w-4 text-slate-500" />
-                  {day.minutes} mins
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* Deterministic Coverage Summary */}
-        <section className="rounded-xl border border-slate-800 bg-slate-950 p-6">
-          <h3 className="text-md font-bold text-white border-b border-slate-800 pb-3 mb-4">
-            Deterministic Coverage Status
-          </h3>
-          <div className="flex items-center justify-between text-sm">
-            <div>
-              <span className="text-xs text-slate-500 block">Passes Executed</span>
-              <span className="font-bold text-white">{externalKit?.coverage?.passes} / 2</span>
-            </div>
-            <div>
-              <span className="text-xs text-slate-500 block">Uncovered MUST Requirements</span>
-              {externalKit?.coverage?.uncovered_requirement_ids?.length === 0 ? (
-                <span className="font-semibold text-emerald-400 flex items-center gap-1">
-                  <CheckCircle className="h-4 w-4" /> 100% MUST Covered
+              {uncoveredMust.length === 0 ? (
+                <span className="inline-flex items-center gap-1.5 font-semibold text-emerald-400">
+                  <CheckCircle2 className="h-4 w-4" aria-hidden="true" /> 100% MUST covered
                 </span>
               ) : (
-                <span className="font-semibold text-red-400">
-                  [{externalKit?.coverage?.uncovered_requirement_ids?.join(", ")}]
+                <span className="inline-flex items-center gap-1.5 font-semibold text-red-400">
+                  <AlertCircle className="h-4 w-4" aria-hidden="true" /> {uncoveredMust.length} uncovered
                 </span>
               )}
             </div>
+            <ul className="mt-4 space-y-2">
+              {requirements.map((req) => {
+                const isCovered = coveredIds.has(req.id);
+                const covering = questions.filter((q) => q.requirement_ids.includes(req.id));
+                return (
+                  <li key={req.id} className="flex flex-col gap-2 rounded-lg border border-slate-800 bg-slate-900 p-3 sm:flex-row sm:items-center sm:justify-between">
+                    <p className="text-sm text-slate-200">
+                      <span className="mr-2 font-mono text-xs font-bold uppercase text-indigo-400">{req.id}</span>
+                      {req.text} <Badge variant={req.priority === "must" ? "must" : "nice"}>{req.priority}</Badge>{" "}
+                      <span className="text-xs tabular-nums text-slate-500">
+                        · {covering.length} question{covering.length === 1 ? "" : "s"}
+                      </span>
+                    </p>
+                    <span className="flex flex-wrap items-center gap-1.5">
+                      {isCovered ? (
+                        covering.map((q) => (
+                          <button
+                            key={q.id}
+                            onClick={() => jumpToQuestion(q.id)}
+                            className="rounded-full bg-slate-800 px-2 py-0.5 font-mono text-[11px] text-indigo-300 hover:bg-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                          >
+                            {q.id}
+                          </button>
+                        ))
+                      ) : (
+                        <span className="text-xs text-red-400">No covering question</span>
+                      )}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        </div>
+      )}
+
+      {tab === "flashcards" && (
+        <div role="tabpanel" id="panel-flashcards" aria-labelledby="tab-flashcards" className="space-y-4">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-lg font-bold text-white">
+              Flashcards <span className="text-sm font-semibold tabular-nums text-slate-400">({flashcards.length})</span>
+            </h2>
+            <div className="flex items-center gap-3">
+              <SaveStateIndicator state={builder.saveState} />
+              <Link
+                href={`/kits/${params.id}/practice`}
+                className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+              >
+                <Play className="h-4 w-4 fill-white" aria-hidden="true" /> Practice now
+              </Link>
+            </div>
           </div>
-        </section>
-      </main>
-    </div>
+          {flashcards.length === 0 ? (
+            <EmptyState
+              icon={<BookOpen className="h-12 w-12" aria-hidden="true" />}
+              title="No flashcards in this kit"
+              description="Flashcards are generated with your kit. If this kit was built before flashcards existed, regenerate a question category."
+            />
+          ) : (
+            <ul className="space-y-3">
+              {flashcards.map((card) => (
+                <li key={card.id} className="rounded-lg border border-slate-800 bg-slate-950 p-4">
+                  {editingFlashId === card.id ? (
+                    <div className="space-y-3">
+                      <div>
+                        <label htmlFor={`flash-front-${card.id}`} className="block text-xs font-medium text-slate-400">Front</label>
+                        <textarea id={`flash-front-${card.id}`} rows={2} value={flashFront} onChange={(e) => setFlashFront(e.target.value)} className="mt-1 block w-full rounded-lg border border-slate-700 bg-slate-900 p-2 text-sm text-white focus:border-indigo-500 focus:outline-none" />
+                      </div>
+                      <div>
+                        <label htmlFor={`flash-back-${card.id}`} className="block text-xs font-medium text-slate-400">Back</label>
+                        <textarea id={`flash-back-${card.id}`} rows={3} value={flashBack} onChange={(e) => setFlashBack(e.target.value)} className="mt-1 block w-full rounded-lg border border-slate-700 bg-slate-900 p-2 text-sm text-slate-300 focus:border-indigo-500 focus:outline-none" />
+                      </div>
+                      <div className="flex justify-end gap-2">
+                        <Button variant="ghost" size="sm" onClick={() => setEditingFlashId(null)}>
+                          <X className="h-3.5 w-3.5" aria-hidden="true" /> Cancel
+                        </Button>
+                        <Button variant="primary" size="sm" onClick={() => saveFlashEdit(card.id)}>
+                          <Check className="h-3.5 w-3.5" aria-hidden="true" /> Save
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="flex items-center gap-2 font-mono text-xs font-bold text-indigo-400">
+                          {card.id}
+                          {card.user_edited && <Badge variant="edited">Edited</Badge>}
+                        </span>
+                        <span className="flex items-center gap-0.5">
+                          <button onClick={() => startFlashEdit(card)} aria-label={`Edit flashcard ${card.id}`} className="rounded p-1.5 text-slate-500 hover:bg-slate-800 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+                            <Pencil className="h-4 w-4" aria-hidden="true" />
+                          </button>
+                          {confirmFlashDelete === card.id ? (
+                            <span className="flex items-center gap-1">
+                              <button
+                                onClick={() => {
+                                  builder.updateFlashcards((prev) => prev.filter((f) => f.id !== card.id));
+                                  setConfirmFlashDelete(null);
+                                  toast.success("Flashcard deleted");
+                                }}
+                                className="rounded bg-red-600 px-2 py-1 text-xs font-semibold text-white hover:bg-red-500"
+                              >
+                                Confirm
+                              </button>
+                              <button onClick={() => setConfirmFlashDelete(null)} aria-label="Cancel delete" className="rounded p-1.5 text-slate-400 hover:text-white">
+                                <X className="h-4 w-4" aria-hidden="true" />
+                              </button>
+                            </span>
+                          ) : (
+                            <button onClick={() => setConfirmFlashDelete(card.id)} aria-label={`Delete flashcard ${card.id}`} className="rounded p-1.5 text-slate-500 hover:bg-red-500/10 hover:text-red-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+                              <Trash2 className="h-4 w-4" aria-hidden="true" />
+                            </button>
+                          )}
+                        </span>
+                      </div>
+                      <p className="text-sm font-semibold text-white">{card.front}</p>
+                      <p className="rounded-lg border border-slate-800/60 bg-slate-900 p-2.5 text-xs leading-relaxed text-slate-400">{card.back}</p>
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+      {tab === "schedule" && (
+        <ScheduleTimeline
+          kitId={params.id}
+          days={externalKit?.schedule?.days ?? []}
+          daysAvailable={externalKit?.schedule?.days_available ?? 0}
+          createdAt={data?.createdAt}
+          onJumpToQuestion={jumpToQuestion}
+          onRebuilt={fetchKitData}
+        />
+      )}
+
+      {/* Brief regenerate confirmation */}
+      {briefConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+          <div
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="brief-regen-title"
+            aria-describedby="brief-regen-desc"
+            className="w-full max-w-md rounded-2xl border border-slate-800 bg-slate-950 p-6 shadow-2xl"
+          >
+            <h3 id="brief-regen-title" className="text-base font-bold text-white">
+              Regenerate company brief?
+            </h3>
+            <p id="brief-regen-desc" className="mt-1 text-sm text-slate-400">
+              This replaces the current summary and focus description with a freshly researched
+              version. Sources are re-attached automatically.
+            </p>
+            <div className="mt-5 flex justify-end gap-3">
+              <Button variant="secondary" size="md" onClick={() => setBriefConfirm(false)}>
+                Cancel
+              </Button>
+              <Button variant="primary" size="md" onClick={handleRegenerateBrief}>
+                Regenerate
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </AppShell>
   );
 }

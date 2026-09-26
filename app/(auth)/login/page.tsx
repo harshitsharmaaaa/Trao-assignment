@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { AuthSplit } from "@/components/auth/auth-split";
+import { Button } from "@/components/ui/button";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -38,61 +40,62 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4">
-      <div className="w-full max-w-md space-y-6 rounded-xl border border-slate-800 bg-slate-950 p-8 shadow-2xl">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight text-white">Sign in to Trao</h2>
-          <p className="mt-1 text-sm text-slate-400">
-            Enter your credentials to access your personalized interview prep kits.
-          </p>
-        </div>
-
-        {error && (
-          <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-400">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-300">Email address</label>
-            <input
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 block w-full rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-white placeholder-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-              placeholder="you@example.com"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-300">Password</label>
-            <input
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 block w-full rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-white placeholder-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50"
-          >
-            {loading ? "Signing in..." : "Sign in"}
-          </button>
-        </form>
-
-        <p className="text-center text-sm text-slate-400">
+    <AuthSplit
+      title="Sign in to Trao"
+      subtitle="Pick up your interview preparation where you left off."
+      footer={
+        <>
           Don&apos;t have an account?{" "}
           <Link href="/register" className="font-medium text-indigo-400 hover:text-indigo-300">
             Register here
           </Link>
-        </p>
-      </div>
-    </div>
+        </>
+      }
+    >
+      {error && (
+        <div role="alert" className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-400">
+          {error}
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-4" noValidate={false}>
+        <div>
+          <label htmlFor="login-email" className="block text-sm font-medium text-slate-300">
+            Email address
+          </label>
+          <input
+            id="login-email"
+            type="email"
+            required
+            autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            aria-invalid={error ? true : undefined}
+            className="mt-1 block w-full rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-white placeholder-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            placeholder="you@example.com"
+          />
+        </div>
+
+        <div>
+          <label htmlFor="login-password" className="block text-sm font-medium text-slate-300">
+            Password
+          </label>
+          <input
+            id="login-password"
+            type="password"
+            required
+            autoComplete="current-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            aria-invalid={error ? true : undefined}
+            className="mt-1 block w-full rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-white placeholder-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+          />
+        </div>
+
+        <Button type="submit" variant="primary" size="lg" loading={loading} className="w-full">
+          {loading ? "Signing in…" : "Sign in"}
+        </Button>
+      </form>
+    </AuthSplit>
   );
 }

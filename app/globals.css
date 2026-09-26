@@ -5,3 +5,39 @@
 body {
   color-scheme: dark;
 }
+
+::selection {
+  background-color: rgb(99 102 241 / 0.35);
+}
+
+/* Visible keyboard focus everywhere (design system: restrained, consistent). */
+:focus-visible {
+  outline: 2px solid rgb(99 102 241);
+  outline-offset: 2px;
+}
+
+/* Subtle scrollbars for sidebar / drawers on dark surfaces. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(51 65 85) transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background-color: rgb(51 65 85);
+  border-radius: 8px;
+}
+
+/* Restrained motion: honor users who prefer reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

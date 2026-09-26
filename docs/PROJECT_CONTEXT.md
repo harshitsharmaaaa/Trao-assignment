@@ -13,3 +13,16 @@ The AI Interview Prep Kit is a full-stack web application and batch CLI pipeline
 - **Reshapeable Builder**: Granular editing, adding/deleting questions/cards, reordering, category moving, and single-section regeneration that strictly preserves user edits.
 - **Practice Mode**: Confidence-weighted flashcard review tracking covered/uncovered status.
 - **Batch Entry Point**: Mandatory `npm run evaluate -- --input <cases.json> --output <kits.json>` supporting parallel processing, failure isolation, and local URLs.
+
+
+## Non-negotiables
+- Next.js + TypeScript + Bun
+- exact Appendix A kit contract
+- exact batch command
+- multi-stage research/generation
+- deterministic coverage
+- deterministic schedule
+- edit-preserving regeneration
+- practice mode
+- security requirements
+- mandatory deployment

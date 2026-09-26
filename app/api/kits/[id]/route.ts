@@ -35,6 +35,9 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       kit: kitExternal,
       internalKit: kitDoc, // Used by builder UI to display internal edit states
       error: kitDoc.error,
+      // Additive UI field (Phase 6): lets the schedule tab map day numbers to
+      // calendar dates for the "today" treatment. No existing field changed.
+      createdAt: kitDoc.createdAt,
     });
   } catch (error: any) {
     console.error("[GET /api/kits/[id] Error]", error);
