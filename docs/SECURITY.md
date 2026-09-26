@@ -18,4 +18,4 @@
 - Passwords hashed using `bcryptjs`.
 - Session tokens stored in HTTP-only, SameSite JWT cookies.
 - All Kit API endpoints enforce server-side ownership checks (`kit.userId === currentUserId`).
-- Secrets (`MONGODB_URI`, `JWT_SECRET`, `GEMINI_API_KEY`) are loaded from `.env.local` or host environment variables, never committed to Git (`.gitignore` includes `.env*`), and never exposed to client-side JS (no `NEXT_PUBLIC_` secret prefix).
+- Secrets (`MONGODB_URI`, `JWT_SECRET`, `GEMINI_API_KEY_1..4` with legacy `GEMINI_API_KEY` fallback) are loaded from `.env.local` or host environment variables, never committed to Git (`.gitignore` includes `.env*`), and never exposed to client-side JS (no `NEXT_PUBLIC_` secret prefix). Logs, errors, and stats expose slot numbers and counts only — never key values.

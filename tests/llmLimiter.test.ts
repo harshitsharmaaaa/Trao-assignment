@@ -12,6 +12,12 @@ describe("LLM provider rate limiter + stats", () => {
     resetRateLimiter();
     resetLlmStats();
     delete process.env.LLM_REQUESTS_PER_MINUTE;
+    // Hermetic stats: unit tests must not depend on local .env key slots.
+    delete process.env.GEMINI_API_KEY;
+    delete process.env.GEMINI_API_KEY_1;
+    delete process.env.GEMINI_API_KEY_2;
+    delete process.env.GEMINI_API_KEY_3;
+    delete process.env.GEMINI_API_KEY_4;
   });
 
   test("defaults to 5 requests/minute when unset", () => {
@@ -50,9 +56,16 @@ describe("LLM provider rate limiter + stats", () => {
       failedAttempts: 0,
       retryCount: 0,
       totalRuntimeMs: 0,
+      configuredKeySlots: 0,
+      keysUsed: 0,
+      keyRotations: 0,
+      exhaustedKeys: 0,
     });
-    // Serialized snapshot must not contain secrets or content by construction.
-    expect(JSON.stringify(stats)).not.toMatch(/key|prompt|token/i);
+    // Serialized snapshot must not contain secret values or content by construction:
+    // all stat values are numeric counts (field names like keysUsed are allowed).
+    const snapshot = JSON.stringify(stats);
+    expect(snapshot).not.toMatch(/prompt|token|AIza|AQ\.Ab8/i);
+    for (const v of Object.values(stats)) expect(typeof v).toBe("number");
     resetLlmStats();
     expect(getLlmStats().totalHttpRequests).toBe(0);
   });

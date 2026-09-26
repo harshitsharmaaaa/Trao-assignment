@@ -4,9 +4,9 @@ import { KitSchema } from "@/schemas/kit.schema";
 
 describe("Single Pipeline Orchestrator", () => {
   test("processes job description and outputs Appendix A compliant Kit", async () => {
-    if (!process.env.GEMINI_API_KEY) {
-      process.env.MOCK_LLM = "true";
-    }
+    // Unit tests must never make real Gemini calls: force mock mode even when
+    // local .env files now carry real 4-slot keys for verification runs.
+    process.env.MOCK_LLM = "true";
 
     const mockJd = `
     Senior Frontend Engineer

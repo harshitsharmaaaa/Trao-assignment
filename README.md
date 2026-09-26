@@ -75,7 +75,7 @@ Create `.env.local` at project root for local development. Never commit `.env.lo
 | :--- | :--- | :---: | :--- | :--- |
 | `MONGODB_URI` | MongoDB connection string | Yes (Prod) | `mongodb://localhost:27017/trao` | `mongodb://localhost:27017/trao` |
 | `JWT_SECRET` | Secret key for JWT session cookies | Yes | 32+ char secret string | `local-dev-jwt-secret-key-32-chars-min` |
-| `GEMINI_API_KEY` | Google Gemini API Key | Yes (when `MOCK_LLM=false`) | Real Gemini API key | `""` |
+| `GEMINI_API_KEY_1..4` | Google Gemini API keys — 4 independent project quota pools (Slot 1 = pre-existing project key; legacy single `GEMINI_API_KEY` still accepted as fallback) | Yes (when `MOCK_LLM=false`) | Real Gemini API keys | `""` |
 | `LLM_PROVIDER` | LLM provider selection (`gemini` or `mock`) | No | `gemini` | `gemini` |
 | `LLM_MODEL` | Gemini LLM model identifier | No | `gemini-3.6-flash` | `gemini-3.6-flash` |
 | `MOCK_LLM` | Enable mock LLM mode for testing (`true`/`false`) | No | `false` | `false` |
@@ -167,9 +167,9 @@ npm run evaluate -- --input cases.json --output kits.json
 ---
 
 ## Real-Gemini Verification Notes (Local Only)
-- Production uses a single `GEMINI_API_KEY` with `LLM_MODEL=gemini-3.6-flash` and `MOCK_LLM=false`. There is no production key rotation.
+- Production uses a single Gemini project key with `LLM_MODEL=gemini-3.6-flash` and `MOCK_LLM=false`. There is no production key rotation.
+- Local verification uses a 4-slot pool (`GEMINI_API_KEY_1..4`, Slot 1 = pre-existing project key) with deterministic `Slot 1 -> 2 -> 3 -> 4` rotation on daily project-quota exhaustion only (`GenerateRequestsPerDay*`); 503s, per-minute 429s, network blips, and malformed JSON stay on the same slot with existing retry/backoff. Legacy single `GEMINI_API_KEY` still works as a one-slot fallback.
 - `runPipeline()` makes 3–4 Gemini calls per case (extraction, brief + role, pass-1 generation, conditional gap fill), so a 5-case batch needs at least 15–20 successful calls before retries.
-- If one project's free-tier quota is exhausted, local verification may split the batch across runs, each run using a different Google Cloud project's key passed via process environment only (never committed, never printed). Each run uses the same canonical `runPipeline()`; per-run outputs are merged into one Appendix B document with duplicate-case-ID rejection. Report only `provider/model/mock/cases/successful-live-calls/failed-live-calls/runtime`.
 
 ## Deployment
 Target host: Netlify (`netlify.toml` at repo root; build `npm run build`, publish `.next`; Next Runtime auto-applied).

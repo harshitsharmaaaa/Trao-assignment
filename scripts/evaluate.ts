@@ -82,7 +82,7 @@ async function main() {
   const model = process.env.LLM_MODEL || "gemini-3.6-flash";
   const mock = process.env.MOCK_LLM === "true" || provider === "mock";
   console.log(
-    `[LLM Stats] provider=${provider} model=${model} mock=${mock} successful_calls=${stats.successfulCalls} failed_calls=${stats.failedCalls} failed_attempts=${stats.failedAttempts} retries=${stats.retryCount} http_requests=${stats.totalHttpRequests} runtime_ms=${stats.totalRuntimeMs}`
+    `[LLM Stats] provider=${provider} model=${model} mock=${mock} configuredKeySlots=${stats.configuredKeySlots} keysUsed=${stats.keysUsed} keyRotations=${stats.keyRotations} exhaustedKeys=${stats.exhaustedKeys} successful_calls=${stats.successfulCalls} failed_calls=${stats.failedCalls} failed_attempts=${stats.failedAttempts} retries=${stats.retryCount} http_requests=${stats.totalHttpRequests} runtime_ms=${stats.totalRuntimeMs}`
   );
 }
 
